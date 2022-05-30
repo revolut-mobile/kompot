@@ -1,0 +1,4 @@
+rootProject.name = "Kompot"
+include ':kompot',
+        ':kompot_core_test',
+        ':kompot_coroutines_test'

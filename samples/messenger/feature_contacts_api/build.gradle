@@ -1,0 +1,9 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply from: '../default_lib_config.gradle'
+apply from: '../kompot_sample_dependencies.gradle'
+
+addDependencies(
+        as_general_dependencies_api
+)

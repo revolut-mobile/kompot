@@ -1,0 +1,86 @@
+apply from: 'kompot_dependencies_versions.gradle'
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlin-parcelize'
+
+android {
+
+    defaultConfig {
+        compileSdkVersion androidCompileSdkVersion
+        buildToolsVersion androidBuildToolsVersion
+        targetSdkVersion androidTargetSdkVersion
+        minSdkVersion androidMinSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+    compileOptions {
+        kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+        }
+    }
+}
+
+ext {
+
+    kompot = [
+            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"],
+            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"],
+
+            [configuration: "implementation", dependency: "com.google.dagger:dagger:$daggerVersion"],
+            [configuration: "implementation", dependency: "com.revolut.recyclerkit:rxdiffadapter:$recyclerKitRxDiffAdapterVersion"],
+            [configuration: "implementation", dependency: "com.revolut.recyclerkit:decorations:$recyclerKitDecorationsVersion"],
+            [configuration: "implementation", dependency: "com.revolut.recyclerkit:delegates:$recyclerKitDelegatesVersion"],
+
+            [configuration: "implementation", dependency: "com.jakewharton.timber:timber:$timberVersion"],
+            [configuration: "implementation", dependency: "androidx.core:core-ktx:$androidxCoreVersion"],
+            [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appCompatVersion"],
+            [configuration: "implementation", dependency: "androidx.recyclerview:recyclerview:$recyclerVersion"],
+            [configuration: "implementation", dependency: "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"],
+            [configuration: "implementation", dependency: "androidx.coordinatorlayout:coordinatorlayout:$coordinatorLayoutVersion"],
+            [configuration: "implementation", dependency: "androidx.lifecycle:lifecycle-runtime-ktx:$androidLifecycleVersion"],
+            [configuration: "kapt", dependency: "androidx.lifecycle:lifecycle-compiler:$androidLifecycleVersion"],
+
+            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"],
+            [configuration: "testRuntimeOnly", dependency: "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"],
+            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"],
+            [configuration: "testImplementation", dependency: "org.junit.vintage:junit-vintage-engine:$junitVintageVersion"],
+            [configuration: "testImplementation", dependency: "org.mockito:mockito-core:$mockitoVersion"],
+            [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockitoVersion"],
+            [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"],
+
+            [configuration: "testImplementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"],
+
+            [configuration: "testImplementation", dependency: "junit:junit:$junitVersion"],
+
+            [configuration: "testImplementation", dependency: "org.robolectric:robolectric:$robolectricVersion", options: {
+                exclude group: "com.google.auto.service", module: "auto-service"
+            }]
+    ]
+}
+
+dependencies {
+    kompot.forEach {
+        add(it.configuration, it.dependency, it.options)
+    }
+}

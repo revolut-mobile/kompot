@@ -1,0 +1,36 @@
+apply from: '../kompot_sample_dependencies.gradle'
+
+android {
+
+    defaultConfig {
+        compileSdkVersion kompot_sample.compileSdkVersion
+        minSdkVersion kompot_sample.minSdkVersion
+        targetSdkVersion kompot_sample.targetSdkVersion
+        targetSdkVersion kompot_sample.targetSdkVersion
+
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        debug
+        release
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+    compileOptions {
+        kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    }
+}
+
+ext.addDependencies = { dependenciesList ->
+    dependencies {
+        dependenciesList.forEach {
+            add(it.configuration, it.dependency, it.options)
+        }
+    }
+}

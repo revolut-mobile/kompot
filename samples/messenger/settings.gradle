@@ -1,0 +1,19 @@
+include ':kompot'
+project(':kompot').projectDir = new File('../../kompot/')
+
+include ':kompot_core_test'
+project(':kompot_core_test').projectDir = new File('../../kompot_core_test/')
+
+include ':kompot_coroutines_test'
+project(':kompot_coroutines_test').projectDir = new File('../../kompot_coroutines_test/')
+
+include ':app',
+        ':data',
+        ':utils',
+        'ui_common',
+        ':feature_chat_api',
+        ':feature_chat_impl',
+        ':feature_contacts_api',
+        ':feature_contacts_impl',
+        ':playground',
+        ':test_core'

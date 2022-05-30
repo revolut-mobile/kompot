@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="toolbarStyle">@style/AppToolbar</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="textAppearanceCaption">@style/CaptionAppearance</item>
+        <item name="textAppearanceBody1">@style/Body1Appearance</item>
+        <item name="textAppearanceBody2">@style/Body2Appearance</item>
+        <item name="textAppearanceHeadline3">@style/Headline3Appearance</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.LargeComponent</item>
+    </style>
+
+    <style name="AppToolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="titleTextColor">@android:color/white</item>
+    </style>
+
+    <style name="AppTheme.EditText">
+        <item name="colorAccent">@color/colorPrimary</item>
+    </style>
+
+    <style name="CaptionAppearance" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/colorText</item>
+    </style>
+
+    <style name="Body1Appearance" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Body2Appearance" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Headline3Appearance" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?android:textColorPrimary</item>
+        <item name="android:textSize">42sp</item>
+    </style>
+
+    <style name="ChatRowBadge">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:background">@drawable/bg_chat_badge</item>
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="LargeButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:minHeight">60dp</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceLargeComponent</item>
+    </style>
+
+    <style name="ShapeAppearance.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">20dp</item>
+    </style>
+
+</resources>

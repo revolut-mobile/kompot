@@ -1,0 +1,59 @@
+apply from: '../kompot/kompot_dependencies_versions.gradle'
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
+
+android {
+
+    defaultConfig {
+        compileSdkVersion androidCompileSdkVersion
+        buildToolsVersion androidBuildToolsVersion
+        targetSdkVersion androidTargetSdkVersion
+        minSdkVersion androidMinSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+    compileOptions {
+        kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    }
+
+    buildTypes {
+        debug
+        release
+    }
+}
+
+ext {
+    kompot_test = [
+            [configuration: "implementation", dependency: project(':kompot')],
+
+            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"],
+
+            [configuration: "implementation", dependency: "androidx.lifecycle:lifecycle-runtime-ktx:$androidLifecycleVersion"],
+            [configuration: "kapt", dependency: "androidx.lifecycle:lifecycle-compiler:$androidLifecycleVersion"],
+
+            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"],
+
+            [configuration: "implementation", dependency: "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"],
+            [configuration: "implementation", dependency: "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"],
+
+            [configuration: "implementation", dependency: "org.mockito:mockito-core:$mockitoVersion"],
+            [configuration: "implementation", dependency: "org.mockito:mockito-inline:$mockitoVersion"],
+            [configuration: "implementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"],
+    ]
+}
+
+dependencies {
+    kompot_test.forEach {
+        add(it.configuration, it.dependency, it.options)
+    }
+}
