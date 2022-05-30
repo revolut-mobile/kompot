@@ -19,8 +19,6 @@ class PlaygroundFeatureHandlerDelegate(
         PlaygroundApiProvider.init(argsProvider)
     }
 
-    override fun getFeatureApi(): PlaygroundApi = PlaygroundApiProvider.component
-
     override fun canHandleFeatureFlowStep(featureStep: FeatureFlowStep): Boolean =
         featureStep is PlaygroundFeatureFlowStep
 

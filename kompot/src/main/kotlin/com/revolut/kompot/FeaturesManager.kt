@@ -15,7 +15,7 @@ interface FeaturesManager {
 
     fun registerFeatures(delegates: List<FeatureHandlerDelegate<*, *, *>>)
 
-    fun registerBaseFeatures(delegates: List<BaseFeatureHandlerDelegate<*, *>>)
+    fun registerDataFeatures(delegates: List<DataFeatureHandlerDelegate<*, *>>)
 
     fun getController(featureStep: FeatureFlowStep, flowModel: BaseFlowModel<*, *, *>): Controller
 
@@ -24,26 +24,26 @@ interface FeaturesManager {
 
 class FeaturesManagerImpl @Inject constructor() : FeaturesManager {
     private val featureDelegates: MutableList<FeatureHandlerDelegate<*, *, *>> = mutableListOf()
-    private val baseFeatureDelegates: MutableList<BaseFeatureHandlerDelegate<*, *>> = mutableListOf()
+    private val dataFeatureDelegates: MutableList<DataFeatureHandlerDelegate<*, *>> = mutableListOf()
 
     override fun clearFeatures(context: Context, signOut: Boolean) {
         if (signOut) {
             featureDelegates.forEach { delegate ->
                 delegate.clearData(context)
             }
-            baseFeatureDelegates.forEach { delegate ->
+            dataFeatureDelegates.forEach { delegate ->
                 delegate.clearData(context)
             }
         }
 
         featureDelegates.forEach { delegate -> delegate.clearReference() }
         featureDelegates.clear()
-        baseFeatureDelegates.forEach { delegate -> delegate.clearReference() }
-        baseFeatureDelegates.clear()
+        dataFeatureDelegates.forEach { delegate -> delegate.clearReference() }
+        dataFeatureDelegates.clear()
     }
 
-    override fun registerBaseFeatures(delegates: List<BaseFeatureHandlerDelegate<*, *>>) {
-        baseFeatureDelegates.addAll(delegates)
+    override fun registerDataFeatures(delegates: List<DataFeatureHandlerDelegate<*, *>>) {
+        dataFeatureDelegates.addAll(delegates)
     }
 
     override fun registerFeature(delegate: FeatureHandlerDelegate<*, *, *>) {
@@ -74,7 +74,7 @@ interface FeatureApi
 
 abstract class FeatureHandlerDelegate<Args : FeatureInitialisationArgs, out Api : FeatureApi, in Step : FeatureFlowStep>(
     argsProvider: () -> Args
-) : BaseFeatureHandlerDelegate<Args, Api>(argsProvider) {
+) : DataFeatureHandlerDelegate<Args, Api>(argsProvider) {
 
     fun getControllerOrThrow(featureStep: FeatureFlowStep, flowModel: BaseFlowModel<*, *, *>): Controller = getController(featureStep as Step, flowModel)
 
@@ -85,13 +85,12 @@ abstract class FeatureHandlerDelegate<Args : FeatureInitialisationArgs, out Api 
     abstract fun handleDestination(destination: NavigationDestination): DestinationHandlingResult?
 }
 
-abstract class BaseFeatureHandlerDelegate<Args, out Api>(protected val argsProvider: () -> Args) {
+abstract class DataFeatureHandlerDelegate<Args, out Api>(protected val argsProvider: () -> Args) {
 
     abstract fun clearReference()
 
     open fun clearData(context: Context) = Unit
 
-    abstract fun getFeatureApi(): Api
 }
 
 interface FeatureFlowStep : FlowStep

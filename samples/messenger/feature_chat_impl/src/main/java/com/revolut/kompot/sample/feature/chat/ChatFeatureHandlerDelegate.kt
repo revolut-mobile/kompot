@@ -22,8 +22,6 @@ class ChatFeatureHandlerDelegate(
         ChatsApiProvider.init(argsProvider)
     }
 
-    override fun getFeatureApi(): ChatApi = ChatsApiProvider.component
-
     override fun canHandleFeatureFlowStep(featureStep: FeatureFlowStep): Boolean = featureStep is ChatFeatureFlowStep
 
     override fun getController(step: ChatFeatureFlowStep, flowModel: BaseFlowModel<*, *, *>): Controller = when (step) {
@@ -45,6 +43,7 @@ class ChatFeatureHandlerDelegate(
 sealed class ChatFeatureFlowStep : FeatureFlowStep {
     @Parcelize
     object ChatList : ChatFeatureFlowStep()
+
     @Parcelize
     data class Chat(val inputData: ChatNavigationDestination.InputData) : ChatFeatureFlowStep()
 }

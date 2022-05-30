@@ -21,8 +21,6 @@ class ContactsFeatureHandlerDelegate(
         ContactsApiProvider.init(argsProvider)
     }
 
-    override fun getFeatureApi(): ContactsApi = ContactsApiProvider.instance
-
     override fun canHandleFeatureFlowStep(featureStep: FeatureFlowStep): Boolean = featureStep is ContactsFeatureFlowStep
 
     override fun getController(step: ContactsFeatureFlowStep, flowModel: BaseFlowModel<*, *, *>): Controller = when(step) {
