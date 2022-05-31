@@ -1,6 +1,7 @@
 package com.revolut.kompot.sample.feature.contacts.ui.screens.input
 
 import com.nhaarman.mockitokotlin2.mock
+import com.revolut.kompot.core.test.assertion.resultStream
 import com.revolut.kompot.coroutines.test.dispatchBlockingTest
 import com.revolut.kompot.coroutines.test.flow.testIn
 import com.revolut.kompot.sample.feature.contacts.ui.screens.input.InputScreenContract.*
