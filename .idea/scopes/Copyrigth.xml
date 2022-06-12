@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Copyrigth" pattern="src[Kompot*]:*..*||test[Kompot*]:*..*" />
+</component>
