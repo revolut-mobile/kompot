@@ -8,7 +8,8 @@ on:
 jobs:
   publish-maven:
     runs-on: ubuntu-latest
-    if: contains(github.ref, 'kompot')
+    #Remove when workflow_dispatch trigger is removed
+    #if: contains(github.ref, 'kompot')
 
     steps:
       - uses: actions/checkout@v2
