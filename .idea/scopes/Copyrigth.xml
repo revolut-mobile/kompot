@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Copyrigth" pattern="(src[Kompot*]:*..*||test[Kompot*]:*..*)&amp;&amp;!file[Kompot.kompot]:build/generated/source/buildConfig/androidTest/debug//*&amp;&amp;!file[Kompot.kompot]:build/generated/source/buildConfig/debug//*&amp;&amp;!file[Kompot.kompot_core_test]:build/generated/source/buildConfig/androidTest/debug//*&amp;&amp;!file[Kompot.kompot_core_test]:build/generated/source/buildConfig/debug//*&amp;&amp;!file[Kompot.kompot_coroutines_test]:build/generated/source/buildConfig/androidTest/debug//*&amp;&amp;!file[Kompot.kompot_coroutines_test]:build/generated/source/buildConfig/debug//*" />
+</component>
