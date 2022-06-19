@@ -3,14 +3,11 @@ name: "Kompot publish"
 on:
   release:
     types: [published]
-  #TODO: remove when publish is stable
-  workflow_dispatch:
 
 jobs:
   publish-maven:
     runs-on: ubuntu-latest
-    #Remove when workflow_dispatch trigger is removed
-    #if: contains(github.ref, 'kompot')
+    if: contains(github.ref, 'kompot')
 
     steps:
       - uses: actions/checkout@v2
