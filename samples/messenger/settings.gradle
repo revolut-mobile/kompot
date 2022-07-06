@@ -1,0 +1,10 @@
+include ':app',
+        ':data',
+        ':utils',
+        'ui_common',
+        ':feature_chat_api',
+        ':feature_chat_impl',
+        ':feature_contacts_api',
+        ':feature_contacts_impl',
+        ':playground',
+        ':test_core'

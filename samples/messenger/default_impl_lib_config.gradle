@@ -1,0 +1,13 @@
+apply from: '../default_lib_config.gradle'
+
+android {
+    buildFeatures {
+        viewBinding true
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+        }
+    }
+}

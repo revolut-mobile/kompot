@@ -1,0 +1,8 @@
+ext {
+    kompot_sample = [
+            targetSdkVersion        : 31,
+            compileSdkVersion       : 31,
+            minSdkVersion           : 23,
+            androidBuildToolsVersion: "30.0.3"
+    ]
+}

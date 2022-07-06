@@ -1,0 +1,29 @@
+# Built application files
+*.ap_
+*.iml
+
+# Files for the Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+generator/out/
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+.idea/*
+!.idea/codeStyles/
+!.idea/codeStyleSettings.xml
+!.idea/inspectionProfiles/
+.DS_Store
+
+*.trace

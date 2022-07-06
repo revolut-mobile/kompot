@@ -1,0 +1,20 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
+apply from: '../default_lib_config.gradle'
+apply from: '../kompot_sample_dependencies.gradle'
+
+ext {
+    ui_common_dependencies = [
+            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"],
+            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"],
+
+            [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appcompat_version"],
+            [configuration: "implementation", dependency: "androidx.constraintlayout:constraintlayout:$constraint_version"],
+            [configuration: "implementation", dependency: "com.google.android.material:material:$material_version"],
+            [configuration: "implementation", dependency: "com.revolut.recyclerkit:delegates:$recycler_kit_version"]
+    ]
+}
+
+addDependencies(ui_common_dependencies)

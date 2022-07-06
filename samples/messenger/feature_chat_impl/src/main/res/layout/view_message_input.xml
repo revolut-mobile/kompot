@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <EditText
+        android:id="@+id/edMsgInput"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@null"
+        android:hint="@string/chat.message_input.hint"
+        android:inputType="text"
+        android:paddingStart="@dimen/padding_xl"
+        android:paddingTop="@dimen/padding_xl"
+        android:paddingBottom="@dimen/padding_xl"
+        android:theme="@style/AppTheme.EditText"
+        tools:ignore="RtlSymmetry" />
+
+    <ImageButton
+        android:id="@+id/btnSend"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="@dimen/padding_l"
+        android:layout_marginEnd="@dimen/padding_l"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="@dimen/padding_s"
+        android:src="@drawable/ic_send"
+        android:tint="@color/selector_action_btn"
+        tools:ignore="ContentDescription" />
+
+</LinearLayout>

@@ -1,0 +1,42 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
+apply from: '../kompot_sample_dependencies.gradle'
+
+android {
+    defaultConfig {
+        applicationId "com.revolut.kompot.sample"
+        compileSdkVersion kompot_sample.compileSdkVersion
+        buildToolsVersion kompot_sample.androidBuildToolsVersion
+        targetSdkVersion kompot_sample.targetSdkVersion
+        minSdkVersion kompot_sample.minSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    buildFeatures {
+        viewBinding true
+    }
+    packagingOptions {
+        exclude "**/attach_hotspot_windows.dll"
+        exclude 'META-INF/AL2.0'
+        exclude 'META-INF/LGPL2.1'
+        exclude 'META-INF/licenses/**'
+        exclude 'META-INF/core.kotlin_module'
+        exclude 'META-INF/LICENSE.md'
+        exclude 'META-INF/LICENSE-notice.md'
+    }
+
+}
+
+dependencies {
+    sampleDependencies.forEach {
+        add(it.configuration, it.dependency, it.options)
+    }
+}

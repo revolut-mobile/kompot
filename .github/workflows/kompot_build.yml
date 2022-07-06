@@ -1,0 +1,24 @@
+name: "Kompot build"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'adopt-hotspot'
+      - name: Build Kompot
+        run: ./gradlew build -x testRelease -x lint
+      - name: Build sample app
+        working-directory: ./samples/messenger
+        run: ./gradlew build -x testRelease -x lint

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_list.title">My chats</string>
+
+    <string name="chat.message_input.hint">Message</string>
+</resources>

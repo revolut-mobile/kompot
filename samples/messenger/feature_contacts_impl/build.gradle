@@ -1,0 +1,23 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
+apply from: '../default_impl_lib_config.gradle'
+apply from: '../kompot_sample_dependencies.gradle'
+
+android {
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    defaultConfig {
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+}
+
+addDependencies(
+        as_general_dependencies_impl + as_room_dependencies + [
+                [configuration: "implementation", dependency: project(':feature_contacts_api')]
+        ]
+)
