@@ -9,7 +9,7 @@ android {
     compileSdk 30
 
     defaultConfig {
-        applicationId "com.revolut.business.build_first_flow"
+        applicationId "com.revolut.kompot.build_first_flow"
         minSdk 23
         targetSdk 30
         versionCode 1
