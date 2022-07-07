@@ -8,7 +8,7 @@ With Kompot, you don't need to bother about the right way of calling fragment tr
 
 ![wave_demo](https://user-images.githubusercontent.com/17656589/171048667-ecf071ca-2962-4c8a-8639-bb9a3ca289bf.gif)
 
-# How to use kompot?
+# How to use Kompot?
 
 ## Installation
 
@@ -33,11 +33,19 @@ dependencies {
     implementation 'com.revolut.kompot:core-test:0.0.1'
     implementation 'com.revolut.kompot:coroutines-test:0.0.1'
     
-    implementation 'com.google.dagger:dagger:x.x.x'
-    kapt 'com.google.dagger:dagger-compiler:x.x.x'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
+    
+    implementation 'com.google.dagger:dagger:2.40.2'
+    kapt 'com.google.dagger:dagger-compiler:2.40.2'
+    
+    //test dependencies
+    testImplementation 'com.revolut.kompot:core-test:0.0.1'
+    testImplementation 'com.revolut.kompot:coroutines-test:0.0.1'
+    
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1"
 }
 ```
-> Kompot has pre-built tools to work with DI and requires Dagger 2 to be present in your module
+> A coroutines dependency will be required to use some of the Kompot features and test them. Kompot has pre-built tools to work with DI and requires Dagger 2 to be present in your module.
 
 ## Wiki
 
