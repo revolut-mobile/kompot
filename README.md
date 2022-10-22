@@ -30,8 +30,6 @@ And then to the module level `build.gradle`:
 ```
 dependencies {
     implementation 'com.revolut.kompot:kompot:0.0.1'
-    implementation 'com.revolut.kompot:core-test:0.0.1'
-    implementation 'com.revolut.kompot:coroutines-test:0.0.1'
     
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
     
