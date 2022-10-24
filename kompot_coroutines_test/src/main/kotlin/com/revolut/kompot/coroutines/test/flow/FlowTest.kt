@@ -17,11 +17,11 @@
 package com.revolut.kompot.coroutines.test.flow
 
 import com.revolut.kompot.coroutines.test.KompotTestScope
+import com.revolut.kompot.coroutines.test.TestContextProvider
+import com.revolut.kompot.coroutines.test.launchDaemon
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 
 /**
  * Launches a new coroutine to collect values/events from the flow asynchronously.
@@ -33,21 +33,20 @@ import kotlinx.coroutines.launch
  *
  * @return FlowAssertion that provides set of methods to assert state of the flow
  */
-fun <T : Any> Flow<T>.testIn(
+
+@OptIn(ExperimentalCoroutinesApi::class)
+fun <T> Flow<T>.testIn(
     kompotTestScope: KompotTestScope
 ): FlowAssertion<T> {
     val testFlow = this
     val testProcessor = TestProcessor<T>()
-    kompotTestScope.launch(
-        start = CoroutineStart.UNDISPATCHED,
-        context = Dispatchers.Unconfined
-    ) {
+    kompotTestScope.launchDaemon(TestContextProvider.unconfinedDispatcher()) {
         testFlow.processWith(testProcessor)
     }
     return FlowAssertionImpl(testProcessor)
 }
 
-private suspend fun <T : Any> Flow<T>.processWith(testProcessor: TestProcessor<T>) {
+private suspend fun <T> Flow<T>.processWith(testProcessor: TestProcessor<T>) {
     try {
         collect { item ->
             testProcessor.processEvent(TestEvent.Item(item))

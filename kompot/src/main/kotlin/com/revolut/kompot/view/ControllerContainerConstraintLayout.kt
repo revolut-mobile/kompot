@@ -16,14 +16,15 @@
 
 package com.revolut.kompot.view
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.WindowInsets
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.res.use
 import com.revolut.kompot.R
 
+@SuppressLint("CustomViewStyleable")
 class ControllerContainerConstraintLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -33,19 +34,23 @@ class ControllerContainerConstraintLayout @JvmOverloads constructor(
     private var lastTransitionStartTime = 0L
 
     override var fitStatusBar = false
-        set(value) {
-            FitStatusBarDelegate.setFitStatusBarProperty(value, this)
-            field = value
-        }
+    override var fitNavigationBar = true
 
     init {
-        context.obtainStyledAttributes(attrs, R.styleable.ControllerContainer).use {
-            fitStatusBar = it.getBoolean(R.styleable.ControllerContainer_fitStatusBar, fitStatusBar)
-        }
+        val ta = context.obtainStyledAttributes(attrs, R.styleable.ControllerContainer)
+        fitStatusBar = ta.getBoolean(R.styleable.ControllerContainer_fitStatusBar, fitStatusBar)
+        fitNavigationBar = ta.getBoolean(R.styleable.ControllerContainer_fitNavigationBar, fitNavigationBar)
+        ta.recycle()
     }
 
-    override fun dispatchApplyWindowInsets(insets: WindowInsets): WindowInsets = FitStatusBarDelegate
-        .dispatchApplyWindowInsets(insets, fitStatusBar, this, { super.dispatchApplyWindowInsets(it) }, { super.onApplyWindowInsets(it) })
+
+    override fun onAttachedToWindow() {
+        EdgeToEdgeViewDelegate.onViewAttachedToWindow(this)
+        super.onAttachedToWindow()
+    }
+
+    override fun dispatchApplyWindowInsets(insets: WindowInsets): WindowInsets =
+        EdgeToEdgeViewDelegate.dispatchApplyWindowInsets(this, insets)
 
     override fun onInterceptTouchEvent(event: MotionEvent?): Boolean = transitionActive || (System.currentTimeMillis() - lastTransitionStartTime <= 200) ||
             super.onInterceptTouchEvent(event)

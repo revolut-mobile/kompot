@@ -27,6 +27,7 @@ internal class TransitionFactory {
         TransitionAnimation.FADE -> FadeTransition(AnimatorTransition.DURATION_DEFAULT)
         TransitionAnimation.MODAL_SLIDE -> ModalShiftTransition(ModalAnimatable.Style.SLIDE)
         TransitionAnimation.MODAL_FADE -> ModalShiftTransition(ModalAnimatable.Style.FADE)
+        TransitionAnimation.BOTTOM_DIALOG_SLIDE -> ModalShiftTransition(ModalAnimatable.Style.BOTTOM_DIALOG_SHEET)
     }
 
 }

@@ -17,7 +17,6 @@
 package com.revolut.kompot.navigable.transition
 
 import android.view.View
-import androidx.annotation.FloatRange
 
 interface ModalAnimatable {
 
@@ -36,6 +35,6 @@ interface ModalAnimatable {
     fun setOnDismissListener(onDismiss: (() -> Unit)?)
 
     enum class Style {
-        FADE, SLIDE
+        FADE, SLIDE, BOTTOM_DIALOG_SHEET,
     }
 }

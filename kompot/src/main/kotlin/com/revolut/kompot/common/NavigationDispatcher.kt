@@ -20,19 +20,30 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Parcelable
+import com.revolut.kompot.ExperimentalBottomDialogStyle
+import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.flow.Flow
 import com.revolut.kompot.navigable.screen.Screen
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
 interface NavigationDestination
 
 data class NavigationEvent(val destination: NavigationDestination) : Event()
 
-fun EventsDispatcher.handleNavigationEvent(destination: NavigationDestination): EventResult? = handleEvent(NavigationEvent(destination))
+fun EventsDispatcher.handleNavigationEvent(destination: NavigationDestination): EventResult? =
+    handleEvent(NavigationEvent(destination))
 
 object NavigationEventHandledResult : EventResult
 
-open class InternalDestination<INPUT : IOData.Input>(open val inputData: INPUT) : NavigationDestination {
+abstract class InternalDestination<INPUT : IOData.Input>(
+    open val inputData: INPUT,
+) : NavigationDestination, Parcelable {
+    @IgnoredOnParcel
+    open val animation: TransitionAnimation? = null
+    @IgnoredOnParcel
     open val addCurrentStepToBackStack: Boolean = true
 }
 
@@ -50,7 +61,11 @@ sealed class ModalDestination : NavigationDestination {
     ) : ModalDestination()
 
     enum class Style {
-        FULLSCREEN, POPUP
+        FULLSCREEN,
+        POPUP,
+
+        @ExperimentalBottomDialogStyle
+        BOTTOM_DIALOG,
     }
 }
 

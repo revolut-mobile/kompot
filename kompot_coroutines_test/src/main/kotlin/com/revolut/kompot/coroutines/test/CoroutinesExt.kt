@@ -16,9 +16,10 @@
 
 package com.revolut.kompot.coroutines.test
 
+import com.revolut.kompot.coroutines.CustomContextWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -28,11 +29,17 @@ import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun dispatchBlockingTest(
-    context: CoroutineContext = TestDispatchersHolder.unconfinedTestDispatcher,
+    context: CoroutineContext = TestContextProvider.unconfinedDispatcher(),
     block: suspend KompotTestScope.() -> Unit,
-) = runTest(context = context) {
+) = runTest(context = CustomContextWrapper(context)) {
     block(KompotTestScopeImpl(wrappedTestScope = this))
-    coroutineContext.cancelChildren()
+
+    coroutineContext[Job]?.children?.forEach { childJob ->
+        val childContext = (childJob as? CoroutineScope)?.coroutineContext ?: return@forEach
+        if (childContext[CancelOnParentCompletionMarkerKey] != null) {
+            childJob.cancel()
+        }
+    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

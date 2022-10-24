@@ -17,6 +17,7 @@ ext{
 
     kompotVersion = '0.0.1'
 
+    //TODO: Update sample dependencies
     as_room_dependencies = [
             [configuration: "implementation", dependency: "androidx.room:room-runtime:$room_version"],
             [configuration: "implementation", dependency: "androidx.room:room-ktx:$room_version"],
@@ -26,6 +27,7 @@ ext{
     as_test_dependencies = [
             [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-api:$jupiter_version"],
             [configuration: "testRuntimeOnly", dependency: "org.junit.jupiter:junit-jupiter-engine:$jupiter_version"],
+            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-params:$jupiter_version"],
             [configuration: "testImplementation", dependency: "org.mockito:mockito-core:$mockito_version"],
             [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockito_version"],
             [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"],

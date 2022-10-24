@@ -3,6 +3,7 @@ ext {
             targetSdkVersion        : 31,
             compileSdkVersion       : 31,
             minSdkVersion           : 23,
+            //WTF?? TODO
             androidBuildToolsVersion: "30.0.3"
     ]
 }

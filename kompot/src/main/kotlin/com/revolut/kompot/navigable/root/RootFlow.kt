@@ -38,6 +38,8 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
 
     override var cacheStrategy: ControllerCacheStrategy = ControllerCacheStrategy.Prioritized
 
+    internal val navActionsScheduler = NavActionsScheduler()
+
     override fun onCreateFlowView(view: View) {
         super.onCreateFlowView(view)
 
@@ -50,6 +52,7 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
         super.onDestroyFlowView()
 
         rootDialogDisplayer.onDestroy()
+        navActionsScheduler.cancelAll()
     }
 
     override fun onAttach() {
@@ -78,6 +81,12 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
                 ModalDestination.Style.FULLSCREEN ->
                     if (getModalAnimatable() != null)
                         TransitionAnimation.MODAL_FADE
+                    else
+                        TransitionAnimation.FADE
+
+                ModalDestination.Style.BOTTOM_DIALOG ->
+                    if (getModalAnimatable() != null)
+                        TransitionAnimation.BOTTOM_DIALOG_SLIDE
                     else
                         TransitionAnimation.FADE
             },

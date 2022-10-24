@@ -9,6 +9,7 @@ android {
         applicationId "com.revolut.kompot.sample"
         compileSdkVersion kompot_sample.compileSdkVersion
         buildToolsVersion kompot_sample.androidBuildToolsVersion
+        //WTF?? TODO
         targetSdkVersion kompot_sample.targetSdkVersion
         minSdkVersion kompot_sample.minSdkVersion
         versionCode 1

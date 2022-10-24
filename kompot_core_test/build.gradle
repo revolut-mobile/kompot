@@ -4,7 +4,6 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'com.vanniktech.maven.publish'
 
 android {
 
@@ -33,28 +32,14 @@ android {
     }
 }
 
-ext {
-    kompot_test = [
-            [configuration: "implementation", dependency: project(':kompot')],
-
-            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"],
-
-            [configuration: "implementation", dependency: "androidx.lifecycle:lifecycle-runtime-ktx:$androidLifecycleVersion"],
-            [configuration: "kapt", dependency: "androidx.lifecycle:lifecycle-compiler:$androidLifecycleVersion"],
-
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"],
-
-            [configuration: "implementation", dependency: "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"],
-            [configuration: "implementation", dependency: "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"],
-
-            [configuration: "implementation", dependency: "org.mockito:mockito-core:$mockitoVersion"],
-            [configuration: "implementation", dependency: "org.mockito:mockito-inline:$mockitoVersion"],
-            [configuration: "implementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"],
-    ]
-}
-
 dependencies {
-    kompot_test.forEach {
-        add(it.configuration, it.dependency, it.options)
-    }
+    implementation project(':kompot')
+    implementation project(':kompot_coroutines_test')
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+    implementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
+
+    implementation "org.mockito:mockito-core:$mockitoVersion"
+    implementation "org.mockito:mockito-inline:$mockitoVersion"
+    implementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
 }

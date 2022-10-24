@@ -18,5 +18,6 @@
 <resources>
     <declare-styleable name="ControllerContainer">
         <attr name="fitStatusBar" format="boolean" />
+        <attr name="fitNavigationBar" format="boolean" />
     </declare-styleable>
 </resources>

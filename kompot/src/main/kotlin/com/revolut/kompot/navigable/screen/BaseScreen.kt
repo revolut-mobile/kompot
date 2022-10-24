@@ -21,7 +21,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewParent
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.core.view.postDelayed
@@ -90,7 +89,7 @@ abstract class BaseScreen<
         val view = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
-        view.fitStatusBar = fitStatusBar
+        view.applyEdgeToEdgeConfig()
         this.view = view as View
 
         view.tag = controllerName
@@ -266,12 +265,6 @@ abstract class BaseScreen<
     protected open fun onScreenViewDestroyed() = Unit
 
     protected abstract fun bindScreen(uiState: UI_STATE, payload: ScreenStates.UIPayload?)
-}
-
-fun BaseScreen<*, *, *>.fitIfAncestorDoesNot(): Boolean {
-    fun ViewParent.fitStatusBar(): Boolean? = (this as? ControllerContainer)?.fitStatusBar.takeIf { it == true } ?: parent?.fitStatusBar()
-
-    return parentControllerManager.controllerViewHolder.container.fitStatusBar()?.not() ?: true
 }
 
 private fun View.showKeyboard(delayMs: Long = 0) {

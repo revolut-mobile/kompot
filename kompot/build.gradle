@@ -42,46 +42,35 @@ android {
     }
 }
 
-ext {
-
-    kompot = [
-            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"],
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"],
-
-            [configuration: "implementation", dependency: "com.google.dagger:dagger:$daggerVersion"],
-            [configuration: "implementation", dependency: "com.revolut.recyclerkit:rxdiffadapter:$recyclerKitRxDiffAdapterVersion"],
-            [configuration: "implementation", dependency: "com.revolut.recyclerkit:decorations:$recyclerKitDecorationsVersion"],
-            [configuration: "implementation", dependency: "com.revolut.recyclerkit:delegates:$recyclerKitDelegatesVersion"],
-
-            [configuration: "implementation", dependency: "com.jakewharton.timber:timber:$timberVersion"],
-            [configuration: "implementation", dependency: "androidx.core:core-ktx:$androidxCoreVersion"],
-            [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appCompatVersion"],
-            [configuration: "implementation", dependency: "androidx.recyclerview:recyclerview:$recyclerVersion"],
-            [configuration: "implementation", dependency: "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"],
-            [configuration: "implementation", dependency: "androidx.coordinatorlayout:coordinatorlayout:$coordinatorLayoutVersion"],
-            [configuration: "implementation", dependency: "androidx.lifecycle:lifecycle-runtime-ktx:$androidLifecycleVersion"],
-            [configuration: "kapt", dependency: "androidx.lifecycle:lifecycle-compiler:$androidLifecycleVersion"],
-
-            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"],
-            [configuration: "testRuntimeOnly", dependency: "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"],
-            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"],
-            [configuration: "testImplementation", dependency: "org.junit.vintage:junit-vintage-engine:$junitVintageVersion"],
-            [configuration: "testImplementation", dependency: "org.mockito:mockito-core:$mockitoVersion"],
-            [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockitoVersion"],
-            [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"],
-
-            [configuration: "testImplementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"],
-
-            [configuration: "testImplementation", dependency: "junit:junit:$junitVersion"],
-
-            [configuration: "testImplementation", dependency: "org.robolectric:robolectric:$robolectricVersion", options: {
-                exclude group: "com.google.auto.service", module: "auto-service"
-            }]
-    ]
-}
-
 dependencies {
-    kompot.forEach {
-        add(it.configuration, it.dependency, it.options)
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+    api "com.google.dagger:dagger:$daggerVersion"
+    api "com.revolut.recyclerkit:rxdiffadapter:$recyclerKitRxDiffAdapterVersion"
+    api "com.revolut.recyclerkit:delegates:$recyclerKitDelegatesVersion"
+    api "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"
+    api "androidx.coordinatorlayout:coordinatorlayout:$coordinatorLayoutVersion"
+
+    implementation project(':kompot_coroutines')
+
+    implementation "com.revolut.recyclerkit:decorations:$recyclerKitDecorationsVersion"
+    implementation "com.jakewharton.timber:timber:$timberVersion"
+
+    implementation "androidx.core:core-ktx:$androidxCoreVersion"
+    implementation "androidx.appcompat:appcompat:$appCompatVersion"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$androidLifecycleVersion"
+    kapt "androidx.lifecycle:lifecycle-compiler:$androidLifecycleVersion"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"
+    testImplementation "org.junit.vintage:junit-vintage-engine:$junitVintageVersion"
+    testImplementation "org.mockito:mockito-core:$mockitoVersion"
+    testImplementation "org.mockito:mockito-inline:$mockitoVersion"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+    testImplementation "junit:junit:$junitVersion"
+
+    testImplementation("org.robolectric:robolectric:$robolectricVersion") {
+        exclude group: "com.google.auto.service", module: "auto-service"
     }
 }

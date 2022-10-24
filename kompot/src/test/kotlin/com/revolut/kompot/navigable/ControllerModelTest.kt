@@ -23,6 +23,7 @@ import com.nhaarman.mockitokotlin2.verify
 import com.revolut.kompot.common.ErrorEvent
 import com.revolut.kompot.common.LifecycleEvent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +33,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -40,8 +41,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 internal class ControllerModelTest {
-
-    private val testDispatcher = TestCoroutineDispatcher()
 
     @Test
     fun `launched flow added to shown scope`() {
@@ -567,6 +566,7 @@ internal class ControllerModelTest {
 
     private fun CoroutineScope.childrenCount() = coroutineContext.job.children.count()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     inner class TestControllerModel : ControllerModel() {
 
         init {
@@ -574,7 +574,7 @@ internal class ControllerModelTest {
                 dialogDisplayer = mock(),
                 eventsDispatcher = mock(),
                 controllersCache = mock(),
-                mainDispatcher = testDispatcher
+                mainDispatcher = UnconfinedTestDispatcher()
             )
         }
 

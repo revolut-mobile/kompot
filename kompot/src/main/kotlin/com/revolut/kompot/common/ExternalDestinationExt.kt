@@ -42,7 +42,7 @@ internal fun ExternalDestination.toIntent(context: Context): Intent = when (this
 }
 
 private fun createBrowserIntent(url: String) =
-    Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER).apply {
+    Intent(Intent.ACTION_VIEW).apply {
         data = Uri.parse(url)
     }
 

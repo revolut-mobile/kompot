@@ -18,10 +18,10 @@ package com.revolut.kompot.entry_point
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.annotation.LayoutRes
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -80,8 +80,7 @@ internal class KompotDelegate(
 
     private fun setUpWindow(hostActivity: ComponentActivity) {
         if (fullScreenEnabled) {
-            hostActivity.window.decorView.systemUiVisibility = hostActivity.window.decorView.systemUiVisibility or
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            WindowCompat.setDecorFitsSystemWindows(hostActivity.window, false)
         }
     }
 

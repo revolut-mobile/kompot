@@ -16,10 +16,12 @@
 
 package com.revolut.kompot.di.flow.scroller
 
+import com.revolut.kompot.ExperimentalKompotApi
 import com.revolut.kompot.di.flow.ParentFlowComponent
 import com.revolut.kompot.navigable.flow.scroller.BaseScrollerFlow
 import dagger.BindsInstance
 
+@ExperimentalKompotApi
 interface BaseScrollerFlowComponent : ParentFlowComponent {
     interface Builder<T : BaseScrollerFlowComponent, B> {
 

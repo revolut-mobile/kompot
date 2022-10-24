@@ -23,18 +23,20 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.di.screen.BaseScreenComponent
+import com.revolut.kompot.navigable.binder.ModelBinder
 import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.screen.BaseScreen
 import com.revolut.kompot.navigable.screen.ScreenModel
 import com.revolut.kompot.navigable.screen.ScreenStates
 import com.revolut.kompot.navigable.utils.Preconditions
-import com.revolut.kompot.navigable.binder.ModelBinder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -43,9 +45,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class BaseScreenTest {
 
-    private val testDispatcher = TestCoroutineDispatcher()
+    private val testScheduler = TestCoroutineScheduler()
     private val rootFlow: RootFlow<*, *> = mock {
         on { rootDialogDisplayer } doReturn mock()
     }
@@ -53,7 +56,7 @@ internal class BaseScreenTest {
     @BeforeEach
     fun setUp() {
         Preconditions.mainThreadRequirementEnabled = false
-        Dispatchers.setMain(testDispatcher)
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
     }
 
     @AfterEach
@@ -195,9 +198,11 @@ internal class BaseScreenTest {
 
         testUIStateFlow.tryEmit(testStates[0])
         testUIStateFlow.tryEmit(testStates[1])
-        testDispatcher.advanceTimeBy(300)
+        testScheduler.advanceTimeBy(300)
+        testScheduler.runCurrent()
         testUIStateFlow.tryEmit(testStates[2])
-        testDispatcher.advanceTimeBy(300)
+        testScheduler.advanceTimeBy(300)
+        testScheduler.runCurrent()
 
         assertEquals(testStates, screen.receivedStates)
     }
@@ -215,9 +220,9 @@ internal class BaseScreenTest {
 
         testUIStateFlow.tryEmit(testStates[0])
         testUIStateFlow.tryEmit(testStates[1])
-        testDispatcher.advanceTimeBy(250)
+        testScheduler.advanceTimeBy(250)
         debounceFlow.tryEmit(Unit)
-        testDispatcher.advanceTimeBy(50)
+        testScheduler.advanceTimeBy(50)
 
         assertEquals(listOf(testStates[0]), screen.receivedStates)
     }
@@ -235,9 +240,11 @@ internal class BaseScreenTest {
 
         testUIStateFlow.tryEmit(testStates[0])
         testUIStateFlow.tryEmit(testStates[1])
-        testDispatcher.advanceTimeBy(250)
+        testScheduler.advanceTimeBy(250)
+        testScheduler.runCurrent()
         debounceFlow.tryEmit(Unit)
-        testDispatcher.advanceTimeBy(300)
+        testScheduler.advanceTimeBy(300)
+        testScheduler.runCurrent()
 
         assertEquals(listOf(testStates[0], testStates[1]), screen.receivedStates)
     }
