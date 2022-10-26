@@ -4,10 +4,10 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
+import com.revolut.kompot.coroutines.test.TestDispatcherExtension
 import com.revolut.kompot.sample.data.database.ChatDao
 import com.revolut.kompot.sample.feature.contacts.data.ContactsMapper
 import com.revolut.kompot.sample.feature.contacts.data.repository.ContactsRepositoryImpl
-import com.revolut.kompot.sample.test.core.TestDispatcherExtension
 import com.revolut.kompot.coroutines.test.dispatchBlockingTest
 import com.revolut.kompot.coroutines.test.flow.testIn
 import kotlinx.coroutines.flow.flowOf
