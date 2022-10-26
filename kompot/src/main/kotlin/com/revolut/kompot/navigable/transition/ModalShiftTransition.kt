@@ -18,7 +18,6 @@ package com.revolut.kompot.navigable.transition
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -52,9 +51,9 @@ internal class ModalShiftTransition(
                 }
             }
         } else {
-            val animatable = getAnimatable(from)
-            if (animatable != null) {
-                animatable.let { animatable ->
+            val modalAnimatable = getAnimatable(from)
+            if (modalAnimatable != null) {
+                modalAnimatable.let { animatable ->
                     animatable.hide {
                         transitionListener.onTransitionEnd()
                         transitionListener.onTransitionFinished()

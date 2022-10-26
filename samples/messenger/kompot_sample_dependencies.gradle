@@ -17,7 +17,6 @@ ext{
 
     kompotVersion = '0.0.1'
 
-    //TODO: Update sample dependencies
     as_room_dependencies = [
             [configuration: "implementation", dependency: "androidx.room:room-runtime:$room_version"],
             [configuration: "implementation", dependency: "androidx.room:room-ktx:$room_version"],
@@ -27,7 +26,6 @@ ext{
     as_test_dependencies = [
             [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-api:$jupiter_version"],
             [configuration: "testRuntimeOnly", dependency: "org.junit.jupiter:junit-jupiter-engine:$jupiter_version"],
-            [configuration: "testImplementation", dependency: "org.junit.jupiter:junit-jupiter-params:$jupiter_version"],
             [configuration: "testImplementation", dependency: "org.mockito:mockito-core:$mockito_version"],
             [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockito_version"],
             [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"],
@@ -36,24 +34,18 @@ ext{
     ]
 
     as_general_dependencies_api = [
-            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"],
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"],
-            [configuration: "implementation", dependency: "com.google.dagger:dagger:$dagger_version"],
             [configuration: "implementation", dependency: "com.jakewharton.timber:timber:$timber_version"],
 
-            [configuration: "implementation", dependency: "com.revolut.kompot:kompot:$kompotVersion"],
-            [configuration: "testImplementation", dependency: "com.revolut.kompot:core-test:$kompotVersion"],
-            [configuration: "testImplementation", dependency: "com.revolut.kompot:coroutines-test:$kompotVersion"]
+            [configuration: "implementation", dependency: project(':kompot')],
+            [configuration: "testImplementation", dependency: project(':kompot_core_test')],
+            [configuration: "testImplementation", dependency: project(':kompot_coroutines_test')]
     ]
 
     as_general_dependencies_impl = as_general_dependencies_api + as_test_dependencies + [
             [configuration: "kapt", dependency: "com.google.dagger:dagger-compiler:$dagger_version"],
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"],
 
-            [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appcompat_version"],
             [configuration: "implementation", dependency: "androidx.constraintlayout:constraintlayout:$constraint_version"],
             [configuration: "implementation", dependency: "com.google.android.material:material:$material_version"],
-            [configuration: "implementation", dependency: "com.revolut.recyclerkit:delegates:$recycler_kit_version"],
 
             [configuration: "implementation", dependency: project(':data')],
             [configuration: "implementation", dependency: project(':ui_common')],

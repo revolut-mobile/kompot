@@ -1,6 +1,5 @@
 package com.revolut.kompot.sample.playground.di
 
-import com.revolut.kompot.FeatureInitialisationArgs
 import com.revolut.kompot.sample.playground.PlaygroundApi
 import com.revolut.kompot.sample.playground.flows.demo.di.DemoFlowInjector
 import com.revolut.kompot.sample.playground.flows.scroller.di.DemoScrollerFlowInjector
@@ -11,14 +10,15 @@ import dagger.Component
 
 @FeatureScope
 @Component
-interface PlaygroundFeatureComponent : PlaygroundApi, DemoFlowInjector, DemoScreenInjector, DemoScrollerFlowInjector {
+interface PlaygroundFeatureComponent : PlaygroundApi, DemoFlowInjector, DemoScreenInjector,
+    DemoScrollerFlowInjector {
     @Component.Factory
     interface Builder {
         fun create(): PlaygroundFeatureComponent
     }
 }
 
-object PlaygroundArguments : FeatureInitialisationArgs
+object PlaygroundArguments
 
 class PlaygroundApiProvider {
 

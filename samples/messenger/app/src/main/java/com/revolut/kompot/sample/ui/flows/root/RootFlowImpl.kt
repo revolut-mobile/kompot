@@ -45,6 +45,6 @@ class RootFlowImpl : RootFlow<RootFlowContract.Step, IOData.EmptyInput>(IOData.E
     override fun onCreateFlowView(view: View) {
         super.onCreateFlowView(view)
 
-        component.featureManager.registerFeatures(Features.createFeaturesList())
+        component.featureRegistry.registerFeatures(Features.createFeatures())
     }
 }
