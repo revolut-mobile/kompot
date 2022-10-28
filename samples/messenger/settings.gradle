@@ -1,15 +1,3 @@
-include ':kompot'
-project(':kompot').projectDir = new File('../../kompot/')
-
-include ':kompot_core_test'
-project(':kompot_core_test').projectDir = new File('../../kompot_core_test/')
-
-include ':kompot_coroutines_test'
-project(':kompot_coroutines_test').projectDir = new File('../../kompot_coroutines_test/')
-
-include ':kompot_coroutines'
-project(':kompot_coroutines').projectDir = new File('../../kompot_coroutines/')
-
 include ':app',
         ':data',
         ':utils',

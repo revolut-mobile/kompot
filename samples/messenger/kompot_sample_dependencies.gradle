@@ -15,7 +15,7 @@ ext{
 
     timber_version = '4.7.1'
 
-    kompotVersion = '0.0.1'
+    kompotVersion = '0.0.2'
 
     as_room_dependencies = [
             [configuration: "implementation", dependency: "androidx.room:room-runtime:$room_version"],
@@ -35,9 +35,9 @@ ext{
     as_general_dependencies_api = [
             [configuration: "implementation", dependency: "com.jakewharton.timber:timber:$timber_version"],
 
-            [configuration: "implementation", dependency: project(':kompot')],
-            [configuration: "testImplementation", dependency: project(':kompot_core_test')],
-            [configuration: "testImplementation", dependency: project(':kompot_coroutines_test')]
+            [configuration: "implementation", dependency: "com.revolut.kompot:kompot:$kompotVersion"],
+            [configuration: "testImplementation", dependency: "com.revolut.kompot:core-test:$kompotVersion"],
+            [configuration: "testImplementation", dependency: "com.revolut.kompot:coroutines-test:$kompotVersion"]
     ]
 
     as_general_dependencies_impl = as_general_dependencies_api + as_test_dependencies + [
