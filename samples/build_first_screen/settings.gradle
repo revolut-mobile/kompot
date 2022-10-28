@@ -1,8 +1,2 @@
-include ':kompot'
-project(':kompot').projectDir = new File('../../kompot/')
-
-include ':kompot_coroutines'
-project(':kompot_coroutines').projectDir = new File('../../kompot_coroutines/')
-
 rootProject.name = "build_first_screen"
 include ':app'

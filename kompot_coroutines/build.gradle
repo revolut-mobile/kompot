@@ -2,6 +2,7 @@ apply from: '../kompot/kompot_dependencies_versions.gradle'
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.vanniktech.maven.publish'
 
 android {
 
