@@ -11,16 +11,7 @@ import com.revolut.kompot.view.ControllerContainerFrameLayout
 
 class RootFlowImpl : RootFlow<RootFlowContract.Step, IOData.EmptyInput>(IOData.EmptyInput) {
 
-    override val rootDialogDisplayer by lazy(LazyThreadSafetyMode.NONE) {
-        DialogDisplayer(
-            loadingDialogDisplayer = DefaultLoadingDialogDisplayer(activity),
-            delegates = emptyList()
-        )
-    }
-
     override val layoutId = R.layout.flow_root
-
-    override val controllerName = "Root"
 
     override val component: RootFlowComponent by lazy(LazyThreadSafetyMode.NONE) {
         (activity.application as App)
