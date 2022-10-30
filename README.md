@@ -30,10 +30,6 @@ And then to the module level `build.gradle`:
 ```
 dependencies {
     implementation 'com.revolut.kompot:kompot:0.0.1'
-    
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
-    
-    implementation 'com.google.dagger:dagger:2.40.2'
     kapt 'com.google.dagger:dagger-compiler:2.40.2'
     
     //test dependencies
@@ -43,7 +39,7 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1"
 }
 ```
-> A coroutines dependency will be required to use some of the Kompot features and test them. Kompot has pre-built tools to work with DI and requires Dagger 2 to be present in your module.
+> Kompot has pre-built tools to work with DI and requires Dagger 2 to be present in your module
 
 ## Wiki
 
