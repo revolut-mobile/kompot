@@ -29,14 +29,12 @@ And then to the module level `build.gradle`:
 
 ```
 dependencies {
-    implementation 'com.revolut.kompot:kompot:0.0.1'
+    implementation 'com.revolut.kompot:kompot:0.0.2'
     kapt 'com.google.dagger:dagger-compiler:2.40.2'
     
     //test dependencies
-    testImplementation 'com.revolut.kompot:core-test:0.0.1'
-    testImplementation 'com.revolut.kompot:coroutines-test:0.0.1'
-    
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1"
+    testImplementation 'com.revolut.kompot:core-test:0.0.2'
+    testImplementation 'com.revolut.kompot:coroutines-test:0.0.2'
 }
 ```
 > Kompot has pre-built tools to work with DI and requires Dagger 2 to be present in your module
