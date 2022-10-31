@@ -6,6 +6,7 @@ android {
         compileSdkVersion kompot_sample.compileSdkVersion
         minSdkVersion kompot_sample.minSdkVersion
         targetSdkVersion kompot_sample.targetSdkVersion
+        targetSdkVersion kompot_sample.targetSdkVersion
 
         versionCode 1
         versionName "1.0"

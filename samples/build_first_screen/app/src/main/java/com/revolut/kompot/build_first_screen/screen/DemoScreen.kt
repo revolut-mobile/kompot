@@ -13,7 +13,6 @@ class DemoScreen(title: String) :
     ) {
 
     override val layoutId = R.layout.screen_demo
-    override val fitStatusBar: Boolean = true
 
     override val screenComponent by lazy(LazyThreadSafetyMode.NONE) {
         (flowComponent as RootFlowComponent)

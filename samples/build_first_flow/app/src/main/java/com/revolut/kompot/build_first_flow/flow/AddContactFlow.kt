@@ -11,8 +11,17 @@ import com.revolut.kompot.view.ControllerContainerFrameLayout
 
 class AddContactFlow : RootFlow<AddContactFlowContract.Step, IOData.EmptyInput>(IOData.EmptyInput) {
 
+    override val rootDialogDisplayer by lazy(LazyThreadSafetyMode.NONE) {
+        DialogDisplayer(
+            loadingDialogDisplayer = DefaultLoadingDialogDisplayer(activity),
+            delegates = emptyList()
+        )
+    }
+
     override val layoutId = R.layout.flow_root
     override val fitStatusBar: Boolean = true
+
+    override val controllerName = "AddContactFlow"
 
     override val component: AddContactFlowComponent by lazy(LazyThreadSafetyMode.NONE) {
         (activity.application as App)

@@ -6,4 +6,5 @@ include ':app',
         ':feature_chat_impl',
         ':feature_contacts_api',
         ':feature_contacts_impl',
-        ':playground'
+        ':playground',
+        ':test_core'

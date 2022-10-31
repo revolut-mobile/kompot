@@ -1,6 +1,6 @@
 package com.revolut.kompot.sample.di
 
-import com.revolut.kompot.FeaturesRegistry
+import com.revolut.kompot.FeaturesManager
 import com.revolut.kompot.sample.SampleApplication
 import com.revolut.kompot.sample.ui.flows.main.di.MainFlowComponent
 import com.revolut.kompot.sample.ui.flows.root.di.RootFlowComponent
@@ -17,7 +17,7 @@ interface AppComponent {
 
     val mainFlowComponent: MainFlowComponent.Builder
 
-    val featureRegistry: FeaturesRegistry
+    val featuresManager: FeaturesManager
 
     @Component.Builder
     interface Builder {

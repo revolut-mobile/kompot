@@ -1,5 +1,6 @@
 package com.revolut.kompot.sample.feature.contacts.di
 
+import com.revolut.kompot.FeatureInitialisationArgs
 import com.revolut.kompot.sample.data.api.DataApi
 import com.revolut.kompot.sample.feature.contacts.api.ContactsApi
 import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.di.AddContactFlowInjector
@@ -13,8 +14,7 @@ import dagger.Component
     dependencies = [DataApi::class],
     modules = [ContactsFeatureModule::class]
 )
-interface ContactsFeatureComponent : ContactsApi, ContactListScreenInjector,
-    AddContactFlowInjector {
+interface ContactsFeatureComponent : ContactsApi, ContactListScreenInjector, AddContactFlowInjector {
     @Component.Factory
     interface Factory {
         fun create(dataApi: DataApi): ContactsFeatureComponent
@@ -23,7 +23,7 @@ interface ContactsFeatureComponent : ContactsApi, ContactListScreenInjector,
 
 data class ContactsArguments(
     val dataApi: DataApi
-)
+) : FeatureInitialisationArgs
 
 class ContactsApiProvider {
 

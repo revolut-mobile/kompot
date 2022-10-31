@@ -1,7 +1,7 @@
 package com.revolut.kompot.sample.ui.flows.root
 
+import com.revolut.kompot.FeatureFlowStep
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.common.InternalDestination
 import com.revolut.kompot.navigable.flow.FlowModel
 import com.revolut.kompot.navigable.flow.FlowState
 import com.revolut.kompot.navigable.flow.FlowStep
@@ -18,6 +18,6 @@ interface RootFlowContract {
         object MainFlow : Step()
 
         @Parcelize
-        data class FeatureRegistryStep(val destination: InternalDestination<*>) : Step()
+        data class FeatureManagerStep(val featureFlowStep: FeatureFlowStep) : Step()
     }
 }
