@@ -7,7 +7,6 @@ apply from: '../kompot_sample_dependencies.gradle'
 
 ext {
     ui_common_dependencies = [
-            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"],
             [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"],
 
             [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appcompat_version"],
