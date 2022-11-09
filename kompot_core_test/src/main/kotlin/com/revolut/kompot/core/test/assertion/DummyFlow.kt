@@ -17,10 +17,19 @@
 package com.revolut.kompot.core.test.assertion
 
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.binder.asFlow
-import com.revolut.kompot.navigable.screen.ScreenModel
-import com.revolut.kompot.navigable.screen.ScreenStates
+import com.revolut.kompot.di.flow.ParentFlowComponent
+import com.revolut.kompot.navigable.flow.BaseFlow
+import com.revolut.kompot.navigable.flow.FlowModel
+import com.revolut.kompot.navigable.flow.FlowStep
 
-fun <UI_STATE : ScreenStates.UI, OUTPUT : IOData.Output> ScreenModel<UI_STATE, OUTPUT>.resultStream() = resultsBinder().asFlow()
+class DummyFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA : IOData.Output>(input: INPUT_DATA) : BaseFlow<STEP, INPUT_DATA, OUTPUT_DATA>(input) {
 
-fun <UI_STATE : ScreenStates.UI, OUTPUT : IOData.Output> ScreenModel<UI_STATE, OUTPUT>.backStream() = backPressBinder().asFlow()
+    override val component: ParentFlowComponent
+        get() = throw NotImplementedError()
+    override val flowModel: FlowModel<STEP, OUTPUT_DATA>
+        get() = throw NotImplementedError()
+
+    override fun updateUi(step: STEP) {
+        throw NotImplementedError()
+    }
+}

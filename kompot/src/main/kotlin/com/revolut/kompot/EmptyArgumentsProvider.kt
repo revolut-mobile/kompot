@@ -16,6 +16,6 @@
 
 package com.revolut.kompot
 
-object EmptyArguments : FeatureInitialisationArgs
+object EmptyArguments
 
 val emptyArgumentsProvider: () -> EmptyArguments = { EmptyArguments }

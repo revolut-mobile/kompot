@@ -16,10 +16,11 @@
 
 package com.revolut.kompot.coroutines.test.flow
 
-import org.opentest4j.AssertionFailedError
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
-internal class FlowAssertionImpl<T : Any>(
-    val testProcessor: TestProcessor<T>
+internal class FlowAssertionImpl<T>(
+    private val testProcessor: TestProcessor<T>
 ) : FlowAssertion<T> {
 
     private val testState: TestState<T>
@@ -32,88 +33,57 @@ internal class FlowAssertionImpl<T : Any>(
         get() = values.size
 
     override fun assertValueCount(expectedCount: Int): FlowAssertion<T> {
-        if (values.size != expectedCount) {
-            fail(
-                message = "Value count do not match",
-                expected = expectedCount,
-                actual = values.size
-            )
-        }
+        assertEquals(expectedCount, values.size, "Value count do not match")
         return this
     }
 
     override fun assertValues(vararg expectedValues: T): FlowAssertion<T> {
         val expected = expectedValues.toList()
-        if (values != expected) {
-            fail(expected = expected, actual = values)
-        }
+        assertEquals(expected, values)
         return this
     }
 
     override fun assertValues(expectedValues: List<T>): FlowAssertion<T> {
-        if (values != expectedValues) {
-            fail(expected = expectedValues, actual = values)
-        }
+        assertEquals(expectedValues, values)
         return this
     }
 
     override fun assertValueAt(index: Int, expectedValue: T): FlowAssertion<T> {
         val actualValue = values[index]
-        if (actualValue != expectedValue) {
-            fail(expected = expectedValue, actual = actualValue)
-        }
+        assertEquals(expectedValue, actualValue)
         return this
     }
 
     override fun assertValueAt(index: Int, predicate: (actualValue: T) -> Boolean): FlowAssertion<T> {
-        if (!predicate(values[index])) {
-            fail(message = "Value not present")
-        }
+        assertTrue({ predicate(values[index]) }, "Value not present")
         return this
     }
 
     override fun assertNoValues(): FlowAssertion<T> {
-        if (values.isNotEmpty()) {
-            fail(message = "Expected no values but got $values")
-        }
+        assertTrue({ values.isEmpty() }, "Expected no values but got $values")
         return this
     }
 
     override fun assertComplete(): FlowAssertion<T> {
-        if (testState !is TestState.Completed) {
-            fail("Flow not completed")
-        }
+        assertTrue({ testState is TestState.Completed }, "Flow not completed")
         return this
     }
 
     override fun assertError(throwable: Throwable): FlowAssertion<T> {
         val actualThrowable = (testState as? TestState.Error<T>)?.throwable
-        if (actualThrowable != throwable) {
-            fail(expected = throwable, actual = actualThrowable)
-        }
+        assertEquals(throwable, actualThrowable)
         return this
     }
 
     override fun <R : Throwable> assertError(throwableClass: Class<R>): FlowAssertion<T> {
         val actualThrowable = (testState as? TestState.Error<T>)?.throwable
-        if (!throwableClass.isInstance(actualThrowable)) {
-            fail(expected = throwableClass, actual = actualThrowable)
-        }
+        assertTrue({ throwableClass.isInstance(actualThrowable) }, "expected $throwableClass but was ${actualThrowable?.javaClass}")
         return this
     }
-
-    private fun fail(message: String) {
-        throw AssertionFailedError(message)
-    }
-
-    private fun fail(message: String = "Values do not match", expected: Any, actual: Any?) {
-        throw AssertionFailedError(message, expected, actual)
-    }
-
 }
 
-fun <T : Any> FlowAssertion<T>.assertLatestValue(predicate: (actualValue: T) -> Boolean) =
+fun <T> FlowAssertion<T>.assertLatestValue(predicate: (actualValue: T) -> Boolean) =
     assertValueAt(valueCount - 1, predicate)
 
-fun <T : Any> FlowAssertion<T>.assertLastValue(expected: T) =
+fun <T> FlowAssertion<T>.assertLastValue(expected: T) =
     assertValueAt(valueCount - 1, expected)

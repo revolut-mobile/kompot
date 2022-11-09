@@ -16,9 +16,18 @@
 
 package com.revolut.kompot.core.test.assertion
 
+import com.nhaarman.mockitokotlin2.mock
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.binder.asFlow
-import com.revolut.kompot.navigable.flow.FlowStep
-import com.revolut.kompot.navigable.flow.scroller.ScrollerFlowModel
+import com.revolut.kompot.di.screen.BaseScreenComponent
+import com.revolut.kompot.navigable.screen.BaseScreen
+import com.revolut.kompot.navigable.screen.ScreenModel
+import com.revolut.kompot.navigable.screen.ScreenStates
 
-fun <STEP : FlowStep, OUTPUT : IOData.Output> ScrollerFlowModel<STEP, OUTPUT>.navigationCommandsStream() = navigationBinder().asFlow()
+class DummyScreen<UI : ScreenStates.UI, INPUT : IOData.Input, OUTPUT : IOData.Output>(
+    input: INPUT
+) : BaseScreen<UI, INPUT, OUTPUT>(input) {
+    override val screenComponent: BaseScreenComponent = mock()
+    override val screenModel: ScreenModel<UI, OUTPUT> = mock()
+    override fun bindScreen(uiState: UI, payload: ScreenStates.UIPayload?) = Unit
+    override val layoutId: Int = 0
+}

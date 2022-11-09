@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package com.revolut.kompot.core.test.assertion
 
 import android.annotation.SuppressLint
 import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.clearInvocations
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
+import com.revolut.kompot.ExperimentalKompotApi
 import com.revolut.kompot.common.ErrorEvent
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.ModalDestination
 import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.common.NavigationEvent
+import com.revolut.kompot.coroutines.test.TestContextProvider
 import com.revolut.kompot.dialog.DialogDisplayer
 import com.revolut.kompot.dialog.DialogDisplayerDelegate
 import com.revolut.kompot.dialog.DialogModel
 import com.revolut.kompot.dialog.DialogModelResult
 import com.revolut.kompot.navigable.Controller
-import com.revolut.kompot.navigable.ControllerKey
-import com.revolut.kompot.navigable.cache.ControllersCache
+import com.revolut.kompot.navigable.binder.asFlow
 import com.revolut.kompot.navigable.flow.Back
 import com.revolut.kompot.navigable.flow.BaseFlowModel
 import com.revolut.kompot.navigable.flow.Flow
@@ -41,24 +45,24 @@ import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.Next
 import com.revolut.kompot.navigable.flow.PostFlowResult
 import com.revolut.kompot.navigable.flow.Quit
+import com.revolut.kompot.navigable.flow.scroller.ScrollerFlow
 import com.revolut.kompot.navigable.screen.Screen
-import com.revolut.kompot.navigable.binder.asFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.parcelize.Parcelize
 import org.junit.jupiter.api.Assertions
 import java.util.*
 
 fun <STEP : FlowStep, OUTPUT : IOData.Output> BaseFlowModel<*, STEP, OUTPUT>.test() = FlowModelAssertion(this)
 
-@SuppressLint("CheckResult")
+@SuppressLint("CheckResult", "VisibleForTests")
 class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal constructor(
     private val flowModel: BaseFlowModel<*, STEP, OUTPUT>
 ) {
 
-    private val testScope = TestCoroutineScope()
+    private val testScope = TestContextProvider.unconfinedTestScope()
 
     private val dialogResultStream = MutableSharedFlow<DialogModelResult>(extraBufferCapacity = 16)
     private val dialogDisplayer = DialogDisplayer(
@@ -77,11 +81,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     private val commandQueue: Queue<FlowNavigationCommand<STEP, OUTPUT>> = LinkedList()
 
     init {
-        flowModel.injectDependencies(
-            dialogDisplayer = dialogDisplayer,
-            eventsDispatcher = mock(),
-            controllersCache = FakeControllersCache()
-        )
+        flowModel.applyTestDependencies(dialogDisplayer = dialogDisplayer)
         flowModel.setInitialState()
         val childFlowModel = FakeFlowModel()
         flowModel
@@ -121,10 +121,12 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
         )
     }
 
+    @OptIn(ExperimentalKompotApi::class)
     @Suppress("UNCHECKED_CAST")
     private fun <T : IOData.Output> finishStepWithResult(result: T) {
         when (val controller = flowModel.getController(flowModel.step)) {
             is Flow<*> -> (controller as Flow<T>).onFlowResult(result)
+            is ScrollerFlow<*> -> (controller as ScrollerFlow<T>).onFlowResult(result)
             is Screen<*> -> (controller as Screen<T>).onScreenResult(result)
         }
     }
@@ -166,6 +168,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun assertDestination(destination: NavigationDestination) {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             Assertions.assertEquals(
                 destination,
                 firstValue.destination,
@@ -177,6 +180,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun assertDestination(assertion: (NavigationDestination) -> Boolean) {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             Assertions.assertTrue(
                 assertion(firstValue.destination),
                 "\nActual: ${firstValue.destination}\n"
@@ -187,6 +191,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun assertError(assertion: (Throwable) -> Boolean) {
         argumentCaptor<ErrorEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             Assertions.assertTrue(
                 assertion(firstValue.throwable),
                 "\nActual: ${firstValue.throwable}\n"
@@ -197,6 +202,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun assertModalScreen(assertion: (Screen<*>) -> Boolean) = apply {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             val screen = (firstValue.destination as ModalDestination.ExplicitScreen<*>).screen
             Assertions.assertTrue(
                 assertion(screen),
@@ -209,6 +215,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun <T : IOData.Output> assertModalScreen(output: T, assertion: (Screen<T>) -> Boolean) = apply {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             val destination = firstValue.destination
             val screen = (destination as ModalDestination.ExplicitScreen<T>).screen
             Assertions.assertTrue(
@@ -223,6 +230,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun assertModalFlow(assertion: (Flow<*>) -> Boolean) = apply {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             val flow = (firstValue.destination as ModalDestination.ExplicitFlow<*>).flow
             Assertions.assertTrue(
                 assertion(flow),
@@ -235,6 +243,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     fun <T : IOData.Output> assertModalFlow(output: T, assertion: (Flow<T>) -> Boolean) = apply {
         argumentCaptor<NavigationEvent>().apply {
             verify(flowModel.eventsDispatcher).handleEvent(capture())
+            clearInvocations(flowModel.eventsDispatcher)
             val destination = firstValue.destination
             val flow = (destination as ModalDestination.ExplicitFlow<T>).flow
             Assertions.assertTrue(
@@ -262,6 +271,7 @@ class FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> internal const
     }
 }
 
+@SuppressLint("VisibleForTests")
 private class FakeFlowModel : BaseFlowModel<FakeState, FakeStep, IOData.EmptyOutput>() {
 
     override val initialStep: FakeStep = FakeStep
@@ -281,21 +291,6 @@ private object FakeStep : FlowStep
 
 @Parcelize
 private object FakeState : FlowState
-
-private class FakeControllersCache : ControllersCache {
-
-    override fun onControllerCreated(controller: Controller) = Unit
-
-    override fun onControllerDestroyed(controller: Controller) = Unit
-
-    override fun removeController(controllerKey: ControllerKey, finish: Boolean, doAfterRemove: () -> Unit) = Unit
-
-    override fun getController(controllerKey: ControllerKey): Controller? = null
-
-    override fun isControllerCached(controllerKey: ControllerKey): Boolean = false
-
-    override fun clearCache() = Unit
-}
 
 private class FakeDialogDisplayerDelegate(
     private val dialogResultStream: kotlinx.coroutines.flow.Flow<DialogModelResult>,

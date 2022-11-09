@@ -22,7 +22,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewParent
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
 import androidx.annotation.VisibleForTesting
@@ -42,13 +41,13 @@ import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.binder.CompositeBinding
 import com.revolut.kompot.navigable.findRootFlow
+import com.revolut.kompot.navigable.root.NavActionsScheduler
 import com.revolut.kompot.navigable.screen.BaseScreen
 import com.revolut.kompot.navigable.transition.ModalAnimatable
 import com.revolut.kompot.navigable.utils.Preconditions
 import com.revolut.kompot.utils.logSize
 import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Suppress("SyntheticAccessor")
 abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA : IOData.Output>(
@@ -73,6 +72,9 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
             view = view
         )
     }
+
+    private val navActionsScheduler: NavActionsScheduler
+        get() = findRootFlow().navActionsScheduler
 
     final override var onFlowResult: (data: OUTPUT_DATA) -> Unit = { }
 
@@ -103,7 +105,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         val view = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("$name: root ViewGroup should be ControllerContainer")
 
-        view.fitStatusBar = fitStatusBar
+        view.applyEdgeToEdgeConfig()
         this.view = view as View
         childManagerContainerView = (view as View).findViewById(containerId)
             ?: throw IllegalStateException("$name: container for child manager should be presented")
@@ -189,6 +191,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         childControllerManagers.values.forEach { manager -> manager.onDestroy() }
         super.onDestroy()
         tillDestroyBinding.clear()
+        navActionsScheduler.cancel(key.value)
         onDestroyFlowView()
         lifecycleDelegate.onDestroy()
     }
@@ -220,7 +223,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         animation: TransitionAnimation = TransitionAnimation.NONE,
         backward: Boolean = false,
         restore: Boolean = false
-    ) = post {
+    ) = scheduleNavAction {
         pushControllerNow(controller, animation, backward, restore)
     }
 
@@ -268,6 +271,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
 
     open fun onActivityResultInternal(requestCode: Int, resultCode: Int, data: Intent?) = Unit
     final override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         lifecycleDelegate.onActivityResult(requestCode, resultCode, data)
     }
 
@@ -314,7 +318,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
 
     override fun handleQuit() {
         if (!handleBackStack()) {
-            quitFlow()
+            quitFlow(navActionsScheduler)
         }
     }
 
@@ -378,26 +382,32 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         flowModel.restoreState(restorationPolicy)
     }
 
-    private fun processFlowNavigationCommand(command: FlowNavigationCommand<STEP, OUTPUT_DATA>) = when (command) {
-        is Next -> {
-            Preconditions.requireMainThread("BaseFlowModel.next()")
-            next(command)
-        }
-        is Back -> {
-            Preconditions.requireMainThread("BaseFlowModel.back()")
-            back()
-        }
-        is Quit -> {
-            Preconditions.requireMainThread("BaseFlowModel.quit()")
-            post { quitFlow() }
-        }
-        is PostFlowResult -> {
-            Preconditions.requireMainThread("BaseFlowModel.postFlowResult()")
-            onFlowResult(command.data)
-        }
-        is StartPostponedStateRestore -> {
-            Preconditions.requireMainThread("BaseFlowModel.startPostponedSavedStateRestore()")
-            pushController(restore = true)
+    private fun processFlowNavigationCommand(command: FlowNavigationCommand<STEP, OUTPUT_DATA>) {
+        when (command) {
+            is Next -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseFlowModel.next()")
+                next(command)
+            }
+            is Back -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseFlowModel.back()")
+                back()
+            }
+            is Quit -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseFlowModel.quit()")
+                quitFlow(navActionsScheduler)
+            }
+            is PostFlowResult -> {
+                Preconditions.requireMainThread("BaseFlowModel.postFlowResult()")
+                onFlowResult(command.data)
+            }
+            is StartPostponedStateRestore -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseFlowModel.startPostponedSavedStateRestore()")
+                pushController(restore = true)
+            }
         }
     }
 
@@ -405,24 +415,27 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         return flowModel
     }
 
-    private fun post(action: () -> Unit) {
-        createdScope.launch(Dispatchers.Main) {
-            action()
-        }
+    private fun scheduleNavAction(action: () -> Unit) {
+        navActionsScheduler.schedule(key.value, action)
     }
 
     internal enum class BackHandleResult { INTERCEPTED, POP_BACK_STACK, UNHANDLED }
 }
 
-fun BaseFlow<*, *, *>.fitIfAncestorDoesNot(): Boolean {
-    fun ViewParent.fitStatusBar(): Boolean? = (this as? ControllerContainer)?.fitStatusBar.takeIf { it == true } ?: parent?.fitStatusBar()
-
-    return parentControllerManager.controllerViewHolder.container.fitStatusBar()?.not() ?: true
+internal fun NavActionsScheduler.ensureAvailability(newCommand: FlowNavigationCommand<*, *>): Boolean {
+    if (hasPendingActions()) {
+        if (BuildConfig.DEBUG) {
+            error(IllegalStateException("Can't start $newCommand. Kompot can only handle one command at a time."))
+        } else {
+            return false
+        }
+    }
+    return true
 }
 
-internal fun Controller.quitFlow() {
+internal fun Controller.quitFlow(navActionsScheduler: NavActionsScheduler) {
     if (parentControllerManager.modal) {
-        parentControllerManager.clear()
+        navActionsScheduler.schedule(key.value) { parentControllerManager.clear() }
     } else {
         parentController?.handleQuit()
     }

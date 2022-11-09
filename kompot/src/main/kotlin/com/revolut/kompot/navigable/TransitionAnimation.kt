@@ -22,5 +22,6 @@ enum class TransitionAnimation {
     SLIDE_LEFT_TO_RIGHT,
     FADE,
     MODAL_FADE,
-    MODAL_SLIDE
+    MODAL_SLIDE,
+    BOTTOM_DIALOG_SLIDE,
 }

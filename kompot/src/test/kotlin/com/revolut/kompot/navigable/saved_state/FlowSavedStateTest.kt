@@ -16,32 +16,21 @@
 
 package com.revolut.kompot.navigable.saved_state
 
-import android.app.Activity
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.revolut.kompot.common.IOData
-import com.revolut.kompot.di.flow.BaseFlowComponent
-import com.revolut.kompot.navigable.Controller
-import com.revolut.kompot.navigable.ControllerExtension
 import com.revolut.kompot.navigable.ControllerManager
-import com.revolut.kompot.navigable.flow.BaseFlow
-import com.revolut.kompot.navigable.flow.BaseFlowModel
-import com.revolut.kompot.navigable.flow.FlowModel
-import com.revolut.kompot.navigable.flow.FlowState
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.TestFlow
+import com.revolut.kompot.navigable.TestFlowModel
+import com.revolut.kompot.navigable.TestState
+import com.revolut.kompot.navigable.TestStep
 import com.revolut.kompot.navigable.flow.RestorationPolicy
-import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.utils.Preconditions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import kotlinx.parcelize.Parcelize
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -264,95 +253,6 @@ internal class FlowSavedStateTest {
 
         assertEquals(TestStep.Step2, restoredFlowModel.step)
         assertEquals(TestState(2), restoredFlowModel.stateWrapper.state)
-    }
-
-}
-
-private sealed class TestStep : FlowStep {
-    @Parcelize
-    object Step1 : TestStep()
-
-    @Parcelize
-    object Step2 : TestStep()
-}
-
-@Parcelize
-private data class TestState(val value: Int) : FlowState
-
-private class TestFlowModel(
-    private val firstStepController: Controller = TestController(),
-    private val postponeSavedStateRestore: Boolean = false,
-) : BaseFlowModel<TestState, TestStep, IOData.EmptyOutput>() {
-
-    override val initialStep: TestStep = TestStep.Step1
-    override val initialState: TestState = TestState(1)
-
-    override fun postponeSavedStateRestore(): Boolean = postponeSavedStateRestore
-
-    override fun getController(step: TestStep): Controller = when (step) {
-        TestStep.Step1 -> firstStepController
-        TestStep.Step2 -> {
-            currentState = TestState(2)
-            TestController()
-        }
-    }
-
-    fun changeState(newValue: Int) {
-        currentState = currentState.copy(value = newValue)
-    }
-
-}
-
-private class TestFlow(testFlowModel: TestFlowModel) : BaseFlow<TestStep, IOData.EmptyInput, IOData.EmptyOutput>(IOData.EmptyInput) {
-
-    override val flowModel: FlowModel<TestStep, IOData.EmptyOutput> = testFlowModel
-
-    override fun updateUi(step: TestStep) = Unit
-
-    override val component: BaseFlowComponent = object : BaseFlowComponent {
-        override fun getControllerExtensions(): Set<ControllerExtension> = emptySet()
-    }
-
-    init {
-        val parentControllerManager: ControllerManager = mock {
-            on { controllersCache } doReturn mock()
-        }
-        val mockedActivity = mock<Activity> {
-            on { window } doReturn mock()
-        }
-        view = mock {
-            on { context } doReturn mockedActivity
-        }
-        childManagerContainerView = mock()
-        val rootFlow: RootFlow<*, *> = mock {
-            on { rootDialogDisplayer } doReturn mock()
-        }
-        bind(parentControllerManager, parentController = rootFlow)
-    }
-
-    override fun getChildControllerManager(container: ViewGroup, extraKey: String): ControllerManager = mock()
-
-}
-
-private class TestController : Controller() {
-
-    override val layoutId: Int = 0
-
-    override fun createView(inflater: LayoutInflater): View {
-        return view
-    }
-
-    init {
-        val mockedActivity = mock<Activity> {
-            on { window } doReturn mock()
-        }
-        view = mock {
-            on { context } doReturn mockedActivity
-        }
-        val parentControllerManager: ControllerManager = mock {
-            on { controllersCache } doReturn mock()
-        }
-        bind(parentControllerManager, parentController = mock())
     }
 
 }

@@ -241,10 +241,9 @@ internal class BaseFlowModelTest {
         fun testNext(stateValue: Int) {
             val step = TestStep(stateValue)
             val addCurrentToBackStack = true
-            next(step, addCurrentToBackStack) {
-                TestState(stateValue)
-            }
+            next(step, addCurrentToBackStack)
             setNextState(step, TransitionAnimation.NONE, addCurrentToBackStack, childFlowModel)
+            currentState = TestState(stateValue)
         }
 
         fun testBack() {

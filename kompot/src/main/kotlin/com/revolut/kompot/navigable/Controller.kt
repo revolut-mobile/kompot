@@ -41,6 +41,7 @@ import com.revolut.kompot.navigable.flow.BaseFlow
 import com.revolut.kompot.navigable.hooks.HooksProvider
 import com.revolut.kompot.navigable.transition.TransitionCallbacks
 import com.revolut.kompot.utils.ControllerScope
+import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
@@ -92,7 +93,8 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
     @StyleRes
     protected open val themeId: Int? = null
     protected abstract val layoutId: Int
-    open val fitStatusBar = false
+    open val fitStatusBar: Boolean? = null
+    open val fitNavigationBar: Boolean? = null
 
     protected val parentFlow: ParentFlow
         get() = parentController as ParentFlow
@@ -156,6 +158,17 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
             view
         } else {
             createView(inflater)
+        }
+    }
+
+    protected fun ControllerContainer.applyEdgeToEdgeConfig() {
+        val controllerFitsStatusBar = this@Controller.fitStatusBar
+        val controllerFitsNavigationBar = this@Controller.fitNavigationBar
+        if (controllerFitsStatusBar != null) {
+            this.fitStatusBar = controllerFitsStatusBar
+        }
+        if (controllerFitsNavigationBar != null) {
+            this.fitNavigationBar = controllerFitsNavigationBar
         }
     }
 

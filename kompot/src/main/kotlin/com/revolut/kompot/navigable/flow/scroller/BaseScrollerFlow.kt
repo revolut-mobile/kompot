@@ -42,18 +42,17 @@ import com.revolut.kompot.navigable.flow.FlowServiceEventHandler
 import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.PostFlowResult
 import com.revolut.kompot.navigable.flow.Quit
+import com.revolut.kompot.navigable.flow.ensureAvailability
 import com.revolut.kompot.navigable.flow.quitFlow
 import com.revolut.kompot.navigable.flow.scroller.steps.StepsChangeCommand
+import com.revolut.kompot.navigable.root.NavActionsScheduler
 import com.revolut.kompot.navigable.utils.Preconditions
 import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 @ExperimentalKompotApi
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA : IOData.Output>(
     val inputData: INPUT_DATA
 ) : Controller(), ScrollerFlow<OUTPUT_DATA>, EventsDispatcher {
@@ -76,6 +75,9 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
             view = view
         )
     }
+
+    private val navActionsScheduler: NavActionsScheduler
+        get() = findRootFlow().navActionsScheduler
 
     final override var onFlowResult: (data: OUTPUT_DATA) -> Unit = { }
 
@@ -128,7 +130,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
         val controllerContainer = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
-        controllerContainer.fitStatusBar = fitStatusBar
+        controllerContainer.applyEdgeToEdgeConfig()
         view = controllerContainer as View
         view.tag = controllerName
         view.findViewById<RecyclerView>(recyclerViewId).apply {
@@ -157,9 +159,17 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
         val position = controllersAdapter.currentList.indexOf(step)
         if (position in 0..layoutManager.itemCount) {
             if (stepsChangeCommand.smoothScroll) {
-                recyclerView.smoothScrollToPosition(position)
+                //We need to queue the smooth scrolls until everything is laid out
+                //other wise can end up in weird states
+                recyclerView.post {
+                    recyclerView.smoothScrollToPosition(position)
+                }
             } else {
-                layoutManager.scrollToPosition(position)
+                //because we are queuing smooth ones, we have to queue normal scrolls as well
+                //so we don't have jumps in-between
+                recyclerView.post {
+                    layoutManager.scrollToPosition(position)
+                }
             }
         }
     }
@@ -198,6 +208,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
         childControllerManagers.forEach { manager -> manager.onDestroy() }
         super.onDestroy()
         tillDestroyBinding.clear()
+        navActionsScheduler.cancel(key.value)
         onDestroyFlowView()
         lifecycleDelegate.onDestroy()
     }
@@ -245,6 +256,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
 
     open fun onActivityResultInternal(requestCode: Int, resultCode: Int, data: Intent?) = Unit
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         lifecycleDelegate.onActivityResult(requestCode, resultCode, data)
     }
 
@@ -281,25 +293,23 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
         return super.handleBack()
     }
 
-    private fun processFlowNavigationCommand(command: FlowNavigationCommand<STEP, OUTPUT_DATA>) = when (command) {
-        is Back -> {
-            Preconditions.requireMainThread("BaseScrollerFlow.back()")
-            back()
-        }
-        is Quit -> {
-            Preconditions.requireMainThread("BaseScrollerFlow.quit()")
-            post { quitFlow() }
-        }
-        is PostFlowResult -> {
-            Preconditions.requireMainThread("BaseScrollerFlow.postFlowResult()")
-            onFlowResult(command.data)
-        }
-        else -> throw IllegalStateException("$command is not supported by the ScrollerFlow")
-    }
-
-    private fun post(action: () -> Unit) {
-        createdScope.launch(Dispatchers.Main) {
-            action()
+    private fun processFlowNavigationCommand(command: FlowNavigationCommand<STEP, OUTPUT_DATA>) {
+        when (command) {
+            is Back -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseScrollerFlow.back()")
+                back()
+            }
+            is Quit -> {
+                if (!navActionsScheduler.ensureAvailability(command)) return
+                Preconditions.requireMainThread("BaseScrollerFlow.quit()")
+                quitFlow(navActionsScheduler)
+            }
+            is PostFlowResult -> {
+                Preconditions.requireMainThread("BaseScrollerFlow.postFlowResult()")
+                onFlowResult(command.data)
+            }
+            else -> throw IllegalStateException("$command is not supported by the ScrollerFlow")
         }
     }
 

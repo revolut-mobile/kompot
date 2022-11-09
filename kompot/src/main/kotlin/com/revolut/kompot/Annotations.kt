@@ -20,3 +20,8 @@ package com.revolut.kompot
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 annotation class ExperimentalKompotApi
+
+@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.FUNCTION)
+annotation class ExperimentalBottomDialogStyle

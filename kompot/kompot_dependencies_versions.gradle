@@ -16,7 +16,7 @@ ext {
 
     timberVersion = '4.7.1'
 
-    androidxCoreVersion = '1.1.0'
+    androidxCoreVersion = '1.7.0'
     appCompatVersion = '1.1.0'
     recyclerVersion = '1.1.0'
     constraintLayoutVersion = '1.1.3'

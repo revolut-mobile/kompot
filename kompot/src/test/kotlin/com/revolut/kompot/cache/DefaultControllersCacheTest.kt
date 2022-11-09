@@ -33,6 +33,8 @@ import com.revolut.kompot.navigable.flow.BaseFlowModel
 import com.revolut.kompot.navigable.flow.FlowState
 import com.revolut.kompot.navigable.flow.FlowStateWrapper
 import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.root.NavActionsScheduler
+import com.revolut.kompot.navigable.root.RootFlow
 import kotlinx.parcelize.Parcelize
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -401,7 +403,7 @@ class DefaultControllersCacheTest {
         key: String,
         cache: ControllersCache,
         cacheStrategy: ControllerCacheStrategy = ControllerCacheStrategy.Auto,
-        parent: Controller? = null
+        parent: Controller = mockedRootFlow()
     ): Controller {
         return TestController(key, cache, cacheStrategy).apply {
             this.parentController = parent
@@ -412,11 +414,16 @@ class DefaultControllersCacheTest {
         key: String,
         cache: ControllersCache,
         children: List<String>,
-        parent: Controller? = null
+        parent: Controller = mockedRootFlow()
     ): BaseFlow<TestStep, IOData.EmptyInput, IOData.EmptyOutput> {
         return TestFlow(key, cache, children).apply {
             this.parentController = parent
         }
+    }
+
+    private fun mockedRootFlow(): RootFlow<*, *> = mock {
+        on { rootDialogDisplayer } doReturn mock()
+        on { navActionsScheduler } doReturn NavActionsScheduler()
     }
 
     class TestController(
