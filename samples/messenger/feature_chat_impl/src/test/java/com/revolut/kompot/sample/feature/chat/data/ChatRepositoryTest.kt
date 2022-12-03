@@ -1,6 +1,7 @@
 package com.revolut.kompot.sample.feature.chat.data
 
 import com.nhaarman.mockitokotlin2.*
+import com.revolut.kompot.coroutines.test.TestDispatcherExtension
 import com.revolut.kompot.sample.data.database.ChatDao
 import com.revolut.kompot.sample.feature.chat.createSampleChat
 import com.revolut.kompot.sample.feature.chat.createSampleChatEntity
@@ -8,7 +9,6 @@ import com.revolut.kompot.sample.feature.chat.createSampleMessage
 import com.revolut.kompot.sample.feature.chat.createSampleMessageEntity
 import com.revolut.kompot.sample.feature.chat.data.repository.ChatRepositoryImpl
 import com.revolut.kompot.sample.feature.contacts.data.ContactsRepository
-import com.revolut.kompot.sample.test.core.TestDispatcherExtension
 import com.revolut.kompot.sample.utils.date.provider.MockDateProvider
 import com.revolut.kompot.coroutines.test.dispatchBlockingTest
 import com.revolut.kompot.coroutines.test.flow.testIn

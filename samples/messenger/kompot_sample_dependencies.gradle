@@ -15,7 +15,7 @@ ext{
 
     timber_version = '4.7.1'
 
-    kompotVersion = '0.0.1'
+    kompotVersion = '0.0.2'
 
     as_room_dependencies = [
             [configuration: "implementation", dependency: "androidx.room:room-runtime:$room_version"],
@@ -30,13 +30,9 @@ ext{
             [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockito_version"],
             [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"],
             [configuration: "testImplementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"],
-            [configuration: "testImplementation", dependency: project(':test_core')],
     ]
 
     as_general_dependencies_api = [
-            [configuration: "implementation", dependency: "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"],
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"],
-            [configuration: "implementation", dependency: "com.google.dagger:dagger:$dagger_version"],
             [configuration: "implementation", dependency: "com.jakewharton.timber:timber:$timber_version"],
 
             [configuration: "implementation", dependency: "com.revolut.kompot:kompot:$kompotVersion"],
@@ -46,12 +42,9 @@ ext{
 
     as_general_dependencies_impl = as_general_dependencies_api + as_test_dependencies + [
             [configuration: "kapt", dependency: "com.google.dagger:dagger-compiler:$dagger_version"],
-            [configuration: "implementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"],
 
-            [configuration: "implementation", dependency: "androidx.appcompat:appcompat:$appcompat_version"],
             [configuration: "implementation", dependency: "androidx.constraintlayout:constraintlayout:$constraint_version"],
             [configuration: "implementation", dependency: "com.google.android.material:material:$material_version"],
-            [configuration: "implementation", dependency: "com.revolut.recyclerkit:delegates:$recycler_kit_version"],
 
             [configuration: "implementation", dependency: project(':data')],
             [configuration: "implementation", dependency: project(':ui_common')],
