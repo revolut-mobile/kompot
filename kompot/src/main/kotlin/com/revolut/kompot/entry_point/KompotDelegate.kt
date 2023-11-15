@@ -36,6 +36,7 @@ import com.revolut.kompot.navigable.cache.DefaultControllersCache
 import com.revolut.kompot.navigable.hooks.ControllerHook
 import com.revolut.kompot.navigable.hooks.HooksProvider
 import com.revolut.kompot.navigable.root.RootFlow
+import com.revolut.kompot.utils.KompotIllegalLifecycleException
 
 internal class KompotDelegate(
     private val rootFlow: RootFlow<*, *>,
@@ -45,33 +46,59 @@ internal class KompotDelegate(
     private val fullScreenEnabled: Boolean = true,
 ) : LifecycleObserver, HooksProvider {
 
-    private lateinit var controllerManager: RootControllerManager
+    private var rootControllerManager: RootControllerManager? = null
+    private var kompotHost: Fragment? = null
 
-    private var kompotHost: SavedStateRegistryOwner? = null
     private val hooks = mutableMapOf<ControllerHook.Key<*>, ControllerHook>()
 
     fun onViewCreated(fragment: Fragment) {
-        val rootManagerCreated = ::controllerManager.isInitialized
-        if (!rootManagerCreated) {
+        val rootInitialised = rootControllerManager != null
+        if (!rootInitialised) {
+            val rootFlowWasCreated = rootFlow.created
+            if (rootFlowWasCreated) {
+                (rootFlow.view.parent as? ViewGroup)?.removeView(rootFlow.view)
+            }
+
             setUpWindow(fragment.requireActivity())
-            createKompotRoot(
+            kompotHost = fragment
+            rootControllerManager = createKompotRoot(
                 container = fragment.view as ViewGroup,
                 activityLauncher = ActivityFromFragmentLauncher(fragment),
                 permissionsRequester = FragmentPermissionsRequester(fragment),
                 savedStateOwner = fragment,
             )
+
+            fragment
+                .savedStateRegistry
+                .takeIf { savedStateEnabled }
+                ?.registerSavedStateProvider(KOMPOT_SAVED_STATE_KEY) {
+                    Bundle().apply {
+                        rootControllerManager?.saveState(this)
+                    }
+                }
+
+            fragment.lifecycle.addObserver(this)
+
+            if (rootFlowWasCreated) {
+                throw KompotIllegalLifecycleException(
+                    "Can't initialise Kompot with the pre-created flow: ${rootFlow.controllerName} is ${rootFlow.lifecycle.currentState}"
+                )
+            }
         } else {
             //If root controller manager is already created, then onViewCreated
             //is invoked more than one time. That means that fragment's view was recreated
             //and we need to show the root flow in the new container
-            controllerManager.attachToHostContainer(container = fragment.view as ViewGroup)
+            requireRootControllerManager().apply {
+                detachFromHostContainer()
+                attachToHostContainer(container = fragment.view as ViewGroup)
+            }
         }
 
         fragment.viewLifecycleOwner.lifecycle.addObserver(
             object : LifecycleObserver {
                 @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 fun onDestroy() {
-                    controllerManager.detachFromHostContainer()
+                    requireRootControllerManager().detachFromHostContainer()
                     fragment.viewLifecycleOwner.lifecycle.removeObserver(this)
                 }
             }
@@ -89,13 +116,13 @@ internal class KompotDelegate(
         savedStateOwner: SavedStateRegistryOwner,
         activityLauncher: ActivityLauncher,
         permissionsRequester: PermissionsRequester,
-    ) {
+    ): RootControllerManager {
         val savedState = savedStateOwner
             .savedStateRegistry
             .takeIf { savedStateEnabled }
             ?.consumeRestoredStateForKey(KOMPOT_SAVED_STATE_KEY)
 
-        controllerManager = RootControllerManager(
+        return RootControllerManager(
             controllersCache = DefaultControllersCache(trimCacheThreshold),
             defaultFlowLayout = defaultFlowLayout,
             activityLauncher = activityLauncher,
@@ -105,18 +132,6 @@ internal class KompotDelegate(
         ).apply {
             showRootFlow(savedState, container)
         }
-
-        savedStateOwner
-            .savedStateRegistry
-            .takeIf { savedStateEnabled }
-            ?.registerSavedStateProvider(KOMPOT_SAVED_STATE_KEY) {
-                Bundle().apply {
-                    controllerManager.saveState(this)
-                }
-            }
-
-        savedStateOwner.lifecycle.addObserver(this)
-        kompotHost = savedStateOwner
     }
 
     fun registerHook(hook: ControllerHook, key: ControllerHook.Key<*>) {
@@ -125,38 +140,38 @@ internal class KompotDelegate(
 
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     fun onResume() {
-        controllerManager.onHostResumed()
+        requireRootControllerManager().onHostResumed()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
     fun onPause() {
-        controllerManager.onHostPaused()
+        requireRootControllerManager().onHostPaused()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        controllerManager.onHostStarted()
+        requireRootControllerManager().onHostStarted()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onStop() {
-        controllerManager.onHostStopped()
+        requireRootControllerManager().onHostStopped()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     fun onDestroy() {
-        controllerManager.onDestroy()
+        requireRootControllerManager().onDestroy()
         kompotHost?.lifecycle?.removeObserver(this)
         kompotHost?.savedStateRegistry?.unregisterSavedStateProvider(KOMPOT_SAVED_STATE_KEY)
         kompotHost = null
     }
 
     fun onBackPressed() {
-        controllerManager.handleBack()
+        requireRootControllerManager().handleBack()
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        controllerManager.onActivityResult(requestCode, resultCode, data)
+        requireRootControllerManager().onActivityResult(requestCode, resultCode, data)
     }
 
     fun onRequestPermissionsResult(
@@ -165,9 +180,11 @@ internal class KompotDelegate(
         grantResults: IntArray
     ) {
         if (permissions.isNotEmpty()) {
-            controllerManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            requireRootControllerManager().onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
+
+    private fun requireRootControllerManager() = checkNotNull(rootControllerManager)
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ControllerHook> getHook(key: ControllerHook.Key<T>): T? = hooks[key] as? T

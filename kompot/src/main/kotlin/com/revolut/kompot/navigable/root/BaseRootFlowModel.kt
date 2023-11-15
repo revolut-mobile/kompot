@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable.root
 
+import androidx.annotation.VisibleForTesting
 import com.revolut.kompot.common.Event
 import com.revolut.kompot.common.EventResult
 import com.revolut.kompot.common.ExternalDestination
@@ -50,7 +51,7 @@ abstract class BaseRootFlowModel<STATE : FlowState, STEP : FlowStep> : BaseFlowM
         //This way the logic in successors in handleNavigationDestination will be handled first
         //that keeps the behaviour consistent with handleNavigationDestination logic.
         val superResult = super.tryHandleEvent(event)
-        if(superResult != null) return superResult
+        if (superResult != null) return superResult
 
         if (event is NavigationEvent) {
             when (event.destination) {
@@ -62,6 +63,11 @@ abstract class BaseRootFlowModel<STATE : FlowState, STEP : FlowStep> : BaseFlowM
             return NavigationEventHandledResult
         }
         return null
+    }
+
+    @VisibleForTesting
+    fun setupRootNavigator(rootFlow: RootFlow<*, *>) {
+        rootNavigator = RootNavigator(rootFlow)
     }
 
     private fun handleExternalDestination(destination: ExternalDestination, controller: Controller?) {

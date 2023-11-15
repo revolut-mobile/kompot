@@ -1,5 +1,6 @@
 package com.revolut.kompot.sample
 
+import com.revolut.kompot.FeatureGateway
 import com.revolut.kompot.sample.data.di.DataApiProvider
 import com.revolut.kompot.sample.feature.chat.ChatFeatureGateway
 import com.revolut.kompot.sample.feature.chat.di.ChatArguments
@@ -12,7 +13,7 @@ import com.revolut.kompot.sample.utils.di.CoreUtilsApiProvider
 
 object Features {
 
-    fun createFeatures() = listOf(
+    fun createFeaturesList(): List<FeatureGateway> = listOf(
         ChatFeatureGateway {
             ChatArguments(
                 dataApi = DataApiProvider.instance,

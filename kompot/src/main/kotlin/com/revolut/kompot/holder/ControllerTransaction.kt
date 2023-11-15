@@ -21,13 +21,18 @@ import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.transition.TransitionListener
+import com.revolut.kompot.view.ControllerContainer
 
 internal class ControllerTransaction(
     val from: Controller?,
     val to: Controller?,
     val controllerManager: ControllerManager,
-    val backward: Boolean
+    val backward: Boolean,
+    val indefinite: Boolean,
 ) : TransitionListener {
+
+    private val controllerContainer
+        get() = controllerManager.controllerViewHolder.container as? ControllerContainer
 
     fun startWith(animation: TransitionAnimation) {
         to?.onTransitionRunUp(true)
@@ -44,34 +49,57 @@ internal class ControllerTransaction(
     override fun onTransitionCreated() {
         from?.view?.visibility = View.VISIBLE
         to?.view?.visibility = View.VISIBLE
+        if (controllerManager.attached) {
+            updateControllersVisibilityLifecycle(
+                controllerToDetach = from.takeIf { !indefinite },
+                controllerToAttach = to,
+            )
+        }
+    }
 
-        from?.onDetach()
-        val managerAttached = controllerManager.attached
-        val destinationControllerAttached = to?.attached == true
-        if (managerAttached && !destinationControllerAttached) {
-            to?.onAttach()
+    private fun updateControllersVisibilityLifecycle(
+        controllerToAttach: Controller?,
+        controllerToDetach: Controller?
+    ) {
+        if (controllerToAttach == null && controllerToDetach == null) return
+        require(controllerToAttach != controllerToDetach)
+
+        val shouldDetachController = controllerToDetach?.attached == true
+        val shouldAttachController = controllerToAttach?.attached == false
+
+        if (shouldDetachController) {
+            controllerToDetach?.onDetach()
+        }
+        if (shouldAttachController) {
+            controllerToAttach?.onAttach()
         }
 
-        if (from != null) {
-            controllerManager.onDetachController?.invoke(from, controllerManager)
+        if (shouldDetachController && controllerToDetach != null) {
+            controllerManager.onDetachController?.invoke(controllerToDetach, controllerManager)
         }
-
-        if (to != null && managerAttached && !destinationControllerAttached) {
-            controllerManager.onAttachController?.invoke(to, controllerManager)
+        if (shouldAttachController && controllerToAttach != null) {
+            controllerManager.onAttachController?.invoke(controllerToAttach, controllerManager)
         }
     }
 
     override fun onTransitionStart() {
+        controllerContainer?.onControllersTransitionStart(indefinite)
         from?.onTransitionStart(false)
         to?.onTransitionStart(true)
     }
 
     override fun onTransitionEnd() {
+        controllerContainer?.onControllersTransitionEnd(indefinite)
         from?.onTransitionEnd(false)
         to?.onTransitionEnd(true)
     }
 
     override fun onTransitionFinished() {
+        updateControllersVisibilityLifecycle(
+            controllerToDetach = from.takeIf { indefinite },
+            controllerToAttach = null,
+        )
+
         if (from != null) {
             controllerManager.controllerViewHolder.remove(from.view)
             if (backward || !controllerManager.controllersCache.isControllerCached(from.key)) {
@@ -80,28 +108,53 @@ internal class ControllerTransaction(
         }
     }
 
+    override fun onTransitionCanceled() {
+        controllerContainer?.onControllersTransitionCanceled(indefinite)
+        to?.onTransitionCanceled()
+        from?.onTransitionCanceled()
+
+        //revert critical state: update controllers lifecycle and detach views if needed
+        updateControllersVisibilityLifecycle(
+            controllerToDetach = to,
+            controllerToAttach = from,
+        )
+        if (to != null) {
+            controllerManager.controllerViewHolder.remove(to.view)
+            if (!backward) {
+                to.onDestroy()
+            }
+        }
+        controllerManager.onTransitionCanceled(
+            from = from,
+            backward = backward,
+        )
+    }
+
     companion object {
 
         fun replaceTransaction(
             from: Controller?,
             to: Controller,
             controllerManager: ControllerManager,
-            backward: Boolean
+            backward: Boolean,
+            indefinite: Boolean,
         ) = ControllerTransaction(
             from = from,
             to = to,
             controllerManager = controllerManager,
-            backward = backward
+            backward = backward,
+            indefinite = indefinite,
         )
 
         fun popTransaction(
             from: Controller,
-            controllerManager: ControllerManager
+            controllerManager: ControllerManager,
         ) = ControllerTransaction(
             from = from,
             to = null,
             controllerManager = controllerManager,
             backward = true,
+            indefinite = false,
         )
 
         fun removeTransaction(
@@ -112,8 +165,8 @@ internal class ControllerTransaction(
             to = null,
             controllerManager = controllerManager,
             backward = false,
+            indefinite = false,
         )
-
     }
 
 }

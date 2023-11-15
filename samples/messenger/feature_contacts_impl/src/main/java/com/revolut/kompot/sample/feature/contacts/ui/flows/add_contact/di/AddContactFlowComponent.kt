@@ -1,18 +1,18 @@
 package com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.di
 
-import com.revolut.kompot.di.flow.BaseFlowComponent
 import com.revolut.kompot.di.scope.FlowScope
+import com.revolut.kompot.navigable.vc.di.FlowViewControllerComponent
 import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.AddContactFlowContract
-import com.revolut.kompot.sample.feature.contacts.ui.screens.input.di.InputScreenInjector
+import com.revolut.kompot.sample.feature.contacts.ui.screens.input.di.InputControllerInjector
 import dagger.Subcomponent
 
 @FlowScope
 @Subcomponent(
     modules = [AddContactFlowModule::class]
 )
-interface AddContactFlowComponent : BaseFlowComponent, InputScreenInjector {
-    val flowModel: AddContactFlowContract.FlowModelApi
+interface AddContactFlowComponent : FlowViewControllerComponent, InputControllerInjector {
+    val model: AddContactFlowContract.FlowModelApi
 
     @Subcomponent.Builder
-    interface Builder : BaseFlowComponent.Builder<AddContactFlowComponent, Builder>
+    interface Builder : FlowViewControllerComponent.Builder<AddContactFlowComponent, Builder>
 }

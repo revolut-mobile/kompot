@@ -19,6 +19,8 @@ package com.revolut.kompot.navigable.utils
 import android.os.Looper
 import androidx.annotation.VisibleForTesting
 import com.revolut.kompot.BuildConfig
+import com.revolut.kompot.common.LifecycleEvent
+import timber.log.Timber
 
 internal object Preconditions {
 
@@ -28,6 +30,38 @@ internal object Preconditions {
     fun requireMainThread(context: String) {
         if (mainThreadRequirementEnabled && !Looper.getMainLooper().isCurrentThread && BuildConfig.DEBUG) {
             throw IllegalStateException("$context is only allowed on the main thread!")
+        }
+    }
+
+    fun assertWrongLaunchTillHide(
+        lastLifecycleEvent: LifecycleEvent?,
+        methodName: String,
+        createdScopeAlternative: String,
+    ) {
+        if (BuildConfig.DEBUG) {
+            when (lastLifecycleEvent) {
+                LifecycleEvent.CREATED -> Timber.e("$methodName is called before onShown, consider to use $createdScopeAlternative [$this]")
+                LifecycleEvent.SHOWN -> Unit
+                LifecycleEvent.HIDDEN -> error("$methodName is called after onHidden [$this]")
+                LifecycleEvent.FINISHED -> error("$methodName is called after onFinished [$this]")
+                null -> Timber.e("$methodName is called before onCreate [$this]")
+            }
+        }
+    }
+
+    fun assertWrongLaunchTillFinish(
+        lastLifecycleEvent: LifecycleEvent?,
+        methodName: String,
+        shownScopeAlternative: String
+    ) {
+        if (BuildConfig.DEBUG) {
+            when (lastLifecycleEvent) {
+                LifecycleEvent.CREATED -> Unit
+                LifecycleEvent.SHOWN -> Timber.e("$methodName is called after onShown, consider to use $shownScopeAlternative [$this]")
+                LifecycleEvent.HIDDEN -> Timber.e("$methodName is called after onHidden $this]")
+                LifecycleEvent.FINISHED -> error("$methodName is called after onFinished [$this]")
+                null -> Timber.e("$methodName is called before onCreate [$this]")
+            }
         }
     }
 }

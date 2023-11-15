@@ -165,6 +165,7 @@ class DefaultControllersCache(
         dependsMap.clear()
         dependantsGlobalSet.clear()
         weakFlowControllersMap.clear()
+        printCacheSize()
     }
 
     private fun printCacheSize() {
@@ -205,6 +206,47 @@ class DefaultControllersCache(
             dependsMap[primaryController.key]?.forEach { dependant ->
                 getController(dependant)?.run {
                     Timber.d("    $controllerName")
+                }
+            }
+        }
+    }
+
+    override fun getCacheLogWithKeys(): String {
+
+        return buildString {
+
+            val strongControllersCount = strongControllersMap.size
+            val weakScreensCount = weakScreenControllersMap.size
+            val weakFlowsCount = weakFlowControllersMap.size
+            val totalSize = strongControllersCount + weakScreensCount + weakFlowsCount
+
+            appendLine("--------- Cache statistics ---------")
+            appendLine("Size $totalSize (strong: $strongControllersCount; weak: $weakCacheSize)")
+            if (strongControllersMap.values.isNotEmpty()) {
+                appendLine("Strong storing: ")
+                strongControllersMap.entries.reversed().forEach { (key, controller) ->
+                    appendLine("    ${controller.controllerName} (${controller.fullControllerName})  key: ${key.value}")
+                }
+            }
+
+            if (weakScreenControllersMap.values.isNotEmpty()) {
+                appendLine("Weak storing: ")
+                weakScreenControllersMap.entries.reversed().forEach { (key, controller) ->
+                    appendLine("    ${controller.controllerName} (${controller.fullControllerName})  key: ${key.value}")
+                }
+            }
+
+            if (weakFlowControllersMap.values.isNotEmpty()) {
+                appendLine("Flow Weak storing: ")
+                weakFlowControllersMap.entries.reversed().forEach { (key, controller) ->
+                    appendLine("    ${controller.controllerName} (${controller.fullControllerName})  key: ${key.value})")
+                }
+            }
+
+            dependsMap.keys.forEach { key ->
+                appendLine("$key dependants:")
+                dependsMap[key]?.forEach { dependant ->
+                    appendLine("    $dependant")
                 }
             }
         }

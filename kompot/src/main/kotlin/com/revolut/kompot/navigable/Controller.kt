@@ -29,31 +29,37 @@ import androidx.annotation.StyleRes
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import com.revolut.kompot.BuildConfig
+import com.revolut.kompot.KompotPlugin
 import com.revolut.kompot.common.ActivityFromControllerLauncher
 import com.revolut.kompot.common.ActivityLauncher
 import com.revolut.kompot.common.PermissionsFromControllerRequester
 import com.revolut.kompot.common.PermissionsRequester
 import com.revolut.kompot.di.flow.ParentFlow
+import com.revolut.kompot.navigable.binder.CompositeBinding
 import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.cache.ControllersCache
 import com.revolut.kompot.navigable.flow.BaseFlow
 import com.revolut.kompot.navigable.hooks.HooksProvider
+import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.transition.TransitionCallbacks
+import com.revolut.kompot.navigable.utils.ControllerEnvironment
+import com.revolut.kompot.navigable.utils.collectTillDetachView
 import com.revolut.kompot.utils.ControllerScope
 import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
 import timber.log.Timber
 
 @Suppress("SyntheticAccessor")
-abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLauncher, PermissionsRequester {
+abstract class Controller :
+    TransitionCallbacks,
+    LifecycleOwner,
+    ActivityLauncher,
+    PermissionsRequester,
+    LayoutOwner {
+
     val activity: Activity by lazy(LazyThreadSafetyMode.NONE) {
         var context: Context = view.context
         while (context is ContextWrapper) {
@@ -66,19 +72,20 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         (context as? Activity) ?: throw IllegalStateException("Activity is not present")
     }
 
-    internal val key: ControllerKey by lazy(LazyThreadSafetyMode.NONE) {
+    val key: ControllerKey by lazy(LazyThreadSafetyMode.NONE) {
         keyInitialization()
     }
     open var keyInitialization: () -> ControllerKey = { ControllerKey.random() }
 
     internal val createdScope: CoroutineScope = ControllerScope()
     internal val attachedScope: CoroutineScope = ControllerScope()
+    internal val tillDestroyBinding = CompositeBinding()
 
     val resources: Resources
         get() = activity.resources
 
     internal lateinit var parentControllerManager: ControllerManager
-    protected val controllersCache: ControllersCache
+    internal val controllersCache: ControllersCache
         get() = parentControllerManager.controllersCache
     internal val hooksProvider: HooksProvider?
         get() = parentControllerManager.hooksProvider
@@ -91,8 +98,7 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
     }
 
     @StyleRes
-    protected open val themeId: Int? = null
-    protected abstract val layoutId: Int
+    open val themeId: Int? = null
     open val fitStatusBar: Boolean? = null
     open val fitNavigationBar: Boolean? = null
 
@@ -100,6 +106,8 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         get() = parentController as ParentFlow
 
     internal var parentController: Controller? = null
+    val environment: ControllerEnvironment
+        get() = calculateEnvironment()
     lateinit var view: View
 
     private var _attached = false
@@ -129,6 +137,7 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
     private val onCreateCallbacks = mutableListOf<() -> Unit>()
     private val onDestroyCallbacks = mutableListOf<() -> Unit>()
     private val onAttachCallbacks = mutableListOf<() -> Unit>()
+    private val onExitTransitionEndCallbacks = mutableListOf<() -> Unit>()
     private val lifecycleRegistry by lazy(LazyThreadSafetyMode.NONE) {
         LifecycleRegistry.createUnsafe(this)
     }
@@ -145,9 +154,12 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
 
     open var cacheStrategy: ControllerCacheStrategy = ControllerCacheStrategy.Auto
 
-    open val controllerDelegates: Set<ControllerExtension> = emptySet()
+    open val controllerExtensions: Set<ControllerExtension> = emptySet()
 
-    abstract fun createView(inflater: LayoutInflater): View
+    open fun createView(inflater: LayoutInflater): View =
+        inflater.inflate(layoutId, null, false).also {
+            this.view = it
+        }
 
     internal fun patchLayoutInflaterWithTheme(inflater: LayoutInflater) = themeId?.let { themeResId ->
         LayoutInflater.from(ContextThemeWrapper(inflater.context, themeResId))
@@ -184,6 +196,7 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
 
     open fun onCreate() {
         _created = true
+        controllerExtensions.forEach { extension -> extension.init(attachedScope) }
         onCreateCallbacks.forEach { func -> func() }
         onCreateCallbacks.clear()
 
@@ -192,7 +205,8 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         _started = true
 
-        controllerDelegates.forEach(ControllerExtension::onCreate)
+        controllerExtensions.forEach { extension -> extension.onParentLifecycleEvent(Lifecycle.Event.ON_CREATE) }
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerCreated(this) }
     }
 
     open fun onDestroy() {
@@ -207,7 +221,8 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         }
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
-        controllerDelegates.forEach(ControllerExtension::onDestroy)
+        controllerExtensions.forEach { extension -> extension.onParentLifecycleEvent(Lifecycle.Event.ON_DESTROY) }
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerDestroyed(this) }
     }
 
     open fun onAttach() {
@@ -217,8 +232,9 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         onAttachCallbacks.forEach { func -> func() }
         onAttachCallbacks.clear()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        KompotPlugin.controllerShownSharedFlow.tryEmit(this)
 
-        controllerDelegates.forEach(ControllerExtension::onAttach)
+        controllerExtensions.forEach { extension -> extension.onParentLifecycleEvent(Lifecycle.Event.ON_RESUME) }
     }
 
     open fun onDetach() {
@@ -227,7 +243,8 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         _detached = true
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
 
-        controllerDelegates.forEach(ControllerExtension::onDetach)
+        controllerExtensions.forEach { extension -> extension.onParentLifecycleEvent(Lifecycle.Event.ON_PAUSE) }
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerDetached(this) }
     }
 
     internal fun finish() {
@@ -254,15 +271,15 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
 
     open fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         doOnAttach {
-            controllerDelegates.forEach { delegate ->
-                delegate.onActivityResult(requestCode, resultCode, data)
+            controllerExtensions.forEach { extension ->
+                extension.onActivityResult(requestCode, resultCode, data)
             }
         }
     }
 
     open fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        controllerDelegates.forEach { delegate ->
-            delegate.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        controllerExtensions.forEach { extension ->
+            extension.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
 
@@ -270,14 +287,28 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
 
     override fun onTransitionStart(enter: Boolean) {
         _activeTransition = if (enter) ActiveTransition.ENTER else ActiveTransition.EXIT
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback ->
+            callback.onTransitionStart(this, enter)
+        }
     }
 
     override fun onTransitionEnd(enter: Boolean) {
         _activeTransition = ActiveTransition.NONE
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback ->
+            callback.onTransitionEnd(this, enter)
+        }
+        if (!enter) {
+            onExitTransitionEndCallbacks.forEach { func -> func() }
+            onExitTransitionEndCallbacks.clear()
+        }
+    }
+
+    override fun onTransitionCanceled() {
+        _activeTransition = ActiveTransition.NONE
     }
 
     open fun handleBack(): Boolean {
-        if (controllerDelegates.any { delegate -> delegate.handleBack() }) {
+        if (controllerExtensions.any { extension -> extension.handleBack() }) {
             return true
         }
         if (!backEnabled) {
@@ -287,15 +318,15 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
     }
 
     internal open fun onParentManagerCleared() {
-        controllerDelegates.any { delegate -> delegate.handleBack() }
+        controllerExtensions.any { extension -> extension.handleBack() }
     }
 
-    fun getTopFlow(): BaseFlow<*, *, *> {
+    fun getTopFlow(): RootFlow<*, *> {
         var topController = (this as? BaseFlow<*, *, *>) ?: parentController
         while (topController?.parentController != null) {
             topController = topController.parentController
         }
-        return topController as BaseFlow<*, *, *>
+        return topController as RootFlow<*, *>
     }
 
     override fun startActivity(intent: Intent) =
@@ -311,35 +342,14 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         onError: suspend (Throwable) -> Unit = { Timber.e(it) },
         onSuccessCompletion: suspend () -> Unit = {},
         onEach: suspend (T) -> Unit = {}
-    ): Job {
-        if (BuildConfig.DEBUG) {
-            when {
-                detached -> error("collectTillDetachView is called after onDetach [${this@Controller}]")
-                !attached -> error("collectTillDetachView is called before onAttach [${this@Controller}]")
-            }
-        }
-        return launchInScope(
-            scope = attachedScope,
-            onError = onError,
-            onSuccessCompletion = onSuccessCompletion,
-            onEach = onEach
-        )
-    }
-
-    private fun <T> Flow<T>.launchInScope(
-        scope: CoroutineScope,
-        onError: suspend (Throwable) -> Unit = { Timber.e(it) },
-        onSuccessCompletion: suspend () -> Unit = {},
-        onEach: suspend (T) -> Unit = {}
-    ): Job =
-        onEach(onEach)
-            .onCompletion { cause ->
-                if (cause == null) onSuccessCompletion()
-            }
-            .catch { cause ->
-                onError(cause)
-            }
-            .launchIn(scope)
+    ): Job = collectTillDetachView(
+        attached = attached,
+        detached = detached,
+        attachedScope = attachedScope,
+        onError = onError,
+        onSuccessCompletion = onSuccessCompletion,
+        onEach = onEach
+    )
 
     fun doOnCreate(onCreate: () -> Unit) {
         if (created) {
@@ -357,6 +367,10 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
         }
     }
 
+    fun doOnNextExitTransition(onNextExit: () -> Unit) {
+        onExitTransitionEndCallbacks.add(onNextExit)
+    }
+
     fun doOnDestroy(onDestroy: () -> Unit) {
         if (destroyed) {
             onDestroy()
@@ -367,6 +381,28 @@ abstract class Controller : TransitionCallbacks, LifecycleOwner, ActivityLaunche
 
     internal open fun handleQuit() {
         parentController?.handleQuit()
+    }
+
+    private fun calculateEnvironment(): ControllerEnvironment {
+        var modalRoot = false
+
+        var controller = this
+        var parent = parentController
+
+        while (parent != null) {
+            if (controller.parentControllerManager.modal) {
+                modalRoot = true
+                break
+            }
+            val parentFlow = parent as? ParentFlow
+            if (parentFlow == null || parentFlow.hasBackStack) {
+                break
+            }
+            controller = parent
+            parent = parent.parentController
+        }
+
+        return ControllerEnvironment(modalRoot = modalRoot)
     }
 
     enum class ActiveTransition {

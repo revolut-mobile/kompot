@@ -22,49 +22,22 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.WindowInsets
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.revolut.kompot.R
 
 @SuppressLint("CustomViewStyleable")
-class ControllerContainerConstraintLayout @JvmOverloads constructor(
+open class ControllerContainerConstraintLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ConstraintLayout(context, attrs, defStyleAttr), ControllerContainer {
-    private var transitionActive: Boolean = false
-    private var lastTransitionStartTime = 0L
-
-    override var fitStatusBar = false
-    override var fitNavigationBar = true
-
-    init {
-        val ta = context.obtainStyledAttributes(attrs, R.styleable.ControllerContainer)
-        fitStatusBar = ta.getBoolean(R.styleable.ControllerContainer_fitStatusBar, fitStatusBar)
-        fitNavigationBar = ta.getBoolean(R.styleable.ControllerContainer_fitNavigationBar, fitNavigationBar)
-        ta.recycle()
-    }
-
+) : ConstraintLayout(context, attrs, defStyleAttr), ControllerContainer by ControllerContainerDelegate(context, attrs) {
 
     override fun onAttachedToWindow() {
-        EdgeToEdgeViewDelegate.onViewAttachedToWindow(this)
+        handleViewAttachedToWindow(this)
         super.onAttachedToWindow()
     }
 
     override fun dispatchApplyWindowInsets(insets: WindowInsets): WindowInsets =
-        EdgeToEdgeViewDelegate.dispatchApplyWindowInsets(this, insets)
+        handleDispatchApplyWindowInsets(this, insets)
 
-    override fun onInterceptTouchEvent(event: MotionEvent?): Boolean = transitionActive || (System.currentTimeMillis() - lastTransitionStartTime <= 200) ||
-            super.onInterceptTouchEvent(event)
-
-    override fun onTransitionRunUp(enter: Boolean) {
-        lastTransitionStartTime = System.currentTimeMillis()
-    }
-
-    override fun onTransitionStart(enter: Boolean) {
-        transitionActive = true
-        lastTransitionStartTime = System.currentTimeMillis()
-    }
-
-    override fun onTransitionEnd(enter: Boolean) {
-        transitionActive = false
-    }
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean =
+        handleDispatchTouchEvent(ev) || super.dispatchTouchEvent(ev)
 }

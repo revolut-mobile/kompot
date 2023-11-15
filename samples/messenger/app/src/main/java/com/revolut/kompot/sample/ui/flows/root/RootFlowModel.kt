@@ -6,11 +6,10 @@ import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.root.BaseRootFlowModel
 import com.revolut.kompot.sample.ui.flows.main.MainFlow
-import timber.log.Timber
 import javax.inject.Inject
 
 class RootFlowModel @Inject constructor(
-    private val featureRegistry: FeaturesRegistry
+    private val featuresRegistry: FeaturesRegistry
 ) : BaseRootFlowModel<RootFlowContract.State, RootFlowContract.Step>(),
     RootFlowContract.FlowModelApi {
 
@@ -19,14 +18,13 @@ class RootFlowModel @Inject constructor(
 
     override fun getController(step: RootFlowContract.Step): Controller = when (step) {
         is RootFlowContract.Step.MainFlow -> MainFlow()
-        is RootFlowContract.Step.FeatureRegistryStep -> featureRegistry.getControllerOrThrow(
+        is RootFlowContract.Step.FeatureRegistryStep -> featuresRegistry.getControllerOrThrow(
             destination = step.destination,
-            flowModel = this
+            flowModel = this,
         )
     }
 
     override fun handleErrorEvent(throwable: Throwable): Boolean {
-        Timber.tag("RootErrorHandler").e(throwable)
         return true
     }
 
@@ -34,9 +32,10 @@ class RootFlowModel @Inject constructor(
         when (navigationDestination) {
             is InternalDestination<*> -> {
                 next(
-                    step = RootFlowContract.Step.FeatureRegistryStep(navigationDestination),
+                    RootFlowContract.Step.FeatureRegistryStep(navigationDestination),
                     addCurrentStepToBackStack = navigationDestination.addCurrentStepToBackStack,
                     animation = navigationDestination.animation
+
                 )
                 true
             }

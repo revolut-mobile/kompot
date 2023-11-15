@@ -2,7 +2,7 @@ package com.revolut.kompot.sample.feature.contacts.ui.screens.contacts
 
 import com.revolut.kompot.sample.feature.contacts.R
 import com.revolut.kompot.sample.feature.contacts.domain.Contact
-import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.ContactListScreenContract.*
+import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.ContactListContract.*
 import com.revolut.kompot.sample.ui_common.RowDelegate
 import com.revolut.kompot.sample.ui_common.TextModel
 import org.junit.jupiter.api.Assertions.assertEquals

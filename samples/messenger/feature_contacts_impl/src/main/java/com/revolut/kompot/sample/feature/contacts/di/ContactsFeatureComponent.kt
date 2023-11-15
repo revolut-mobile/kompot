@@ -3,7 +3,7 @@ package com.revolut.kompot.sample.feature.contacts.di
 import com.revolut.kompot.sample.data.api.DataApi
 import com.revolut.kompot.sample.feature.contacts.api.ContactsApi
 import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.di.AddContactFlowInjector
-import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.di.ContactListScreenInjector
+import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.di.ContactListControllerInjector
 import com.revolut.kompot.sample.utils.LazySingletonHolder
 import com.revolut.kompot.sample.utils.di.FeatureScope
 import dagger.Component
@@ -13,7 +13,7 @@ import dagger.Component
     dependencies = [DataApi::class],
     modules = [ContactsFeatureModule::class]
 )
-interface ContactsFeatureComponent : ContactsApi, ContactListScreenInjector,
+interface ContactsFeatureComponent : ContactsApi, ContactListControllerInjector,
     AddContactFlowInjector {
     @Component.Factory
     interface Factory {

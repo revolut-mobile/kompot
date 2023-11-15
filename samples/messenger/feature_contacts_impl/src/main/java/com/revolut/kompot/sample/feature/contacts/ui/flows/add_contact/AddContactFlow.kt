@@ -1,21 +1,23 @@
 package com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact
 
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.flow.BaseFlow
+import com.revolut.kompot.navigable.vc.ViewController
+import com.revolut.kompot.navigable.vc.composite.stateful_flow.ModelBinding
+import com.revolut.kompot.navigable.vc.composite.stateful_flow.StatefulFlowViewController
 import com.revolut.kompot.sample.feature.contacts.di.ContactsApiProvider
-import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.AddContactFlowContract.Step
-import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.di.AddContactFlowComponent
 
-class AddContactFlow : BaseFlow<Step, IOData.EmptyInput, IOData.EmptyOutput>(IOData.EmptyInput) {
+class AddContactFlow : ViewController<IOData.EmptyOutput>(), StatefulFlowViewController {
 
-    override val component: AddContactFlowComponent by lazy(LazyThreadSafetyMode.NONE) {
+    override val component by lazy(LazyThreadSafetyMode.NONE) {
         ContactsApiProvider.component
             .getAddContactFlowComponentBuilder()
-            .flow(this)
+            .controller(this)
             .build()
     }
-
-    override val flowModel by lazy(LazyThreadSafetyMode.NONE) { component.flowModel }
-
-    override fun updateUi(step: Step) = Unit
+    override val controllerModel by lazy(LazyThreadSafetyMode.NONE) {
+        component.model
+    }
+    override val modelBinding by lazy(LazyThreadSafetyMode.NONE) {
+        ModelBinding(controllerModel)
+    }
 }

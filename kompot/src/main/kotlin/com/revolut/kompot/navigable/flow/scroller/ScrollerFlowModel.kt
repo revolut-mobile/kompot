@@ -21,13 +21,12 @@ import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.binder.ModelBinder
 import com.revolut.kompot.navigable.flow.FlowNavigationCommand
-import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.scroller.steps.StepsChangeCommand
 import kotlinx.coroutines.flow.Flow
 
 @ExperimentalKompotApi
 interface ScrollerFlowModel<
-        STEP : FlowStep,
+        STEP : ScrollerFlowStep,
         OUTPUT_DATA : IOData.Output
         > {
 

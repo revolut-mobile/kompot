@@ -9,7 +9,7 @@ import com.revolut.kompot.coroutines.test.dispatchBlockingTest
 import com.revolut.kompot.sample.feature.contacts.data.ContactsRepository
 import com.revolut.kompot.sample.feature.contacts.domain.Contact
 import com.revolut.kompot.sample.feature.contacts.ui.flows.add_contact.AddContactFlowContract.Step
-import com.revolut.kompot.sample.feature.contacts.ui.screens.input.InputScreenContract
+import com.revolut.kompot.sample.feature.contacts.ui.screens.input.InputContract
 import org.junit.jupiter.api.Test
 
 class AddContactFlowModelTest {
@@ -33,11 +33,11 @@ class AddContactFlowModelTest {
         flowModel.test()
             .assertStep(
                 step = Step.InputFirstName,
-                result = InputScreenContract.OutputData(firstName)
+                result = InputContract.OutputData(firstName)
             )
             .assertStep(
                 step = Step.InputLastName,
-                result = InputScreenContract.OutputData(lastName)
+                result = InputContract.OutputData(lastName)
             ).also {
                 verify(contactsRepository).saveContact(expectedContact)
             }

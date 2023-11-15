@@ -9,3 +9,7 @@ addDependencies(
                 [configuration: "implementation", dependency: project(':feature_contacts_api')]
         ]
 )
+
+android {
+        namespace "com.revolut.kompot.sample.feature.api.chat"
+}

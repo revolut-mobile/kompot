@@ -33,6 +33,13 @@ class DialogDisplayer(
 
     fun hideAllDialogs() = delegates.forEach { it.hideDialog() }
 
+    fun hideDialog(dialogModel: DialogModel<*>) {
+        delegates
+            .find { displayer -> displayer.canHandle(dialogModel) }
+            ?.hideDialog()
+            ?: throw IllegalStateException("No displayer delegate found for ${dialogModel.javaClass}")
+    }
+
     fun onAttach() {
         delegates.forEach(DialogDisplayerDelegate<*>::onAttach)
     }

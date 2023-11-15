@@ -16,7 +16,7 @@
 
 package com.revolut.kompot.navigable.flow.scroller.steps
 
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.flow.scroller.ScrollerFlowStep
 
-internal fun <S: FlowStep> Steps<S>.toChangeCommand(smoothScroll: Boolean) =
-    StepsChangeCommand(steps = steps, selected = selected, smoothScroll = smoothScroll)
+internal fun <S: ScrollerFlowStep> Steps<S>.toChangeCommand(smoothScroll: Boolean) =
+    StepsChangeCommand(steps = steps, selectedStepId = selectedStepId, smoothScroll = smoothScroll)

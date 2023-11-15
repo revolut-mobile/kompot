@@ -21,6 +21,7 @@ import android.animation.AnimatorListenerAdapter
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Interpolator
+import com.revolut.kompot.navigable.transition.Transition.Companion.DURATION_DEFAULT
 
 internal abstract class AnimatorTransition(
     val duration: Long = DURATION_DEFAULT,
@@ -66,7 +67,7 @@ internal abstract class AnimatorTransition(
         animator.duration = duration
         animator.interpolator = interpolator
         animator.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator?) {
+            override fun onAnimationEnd(animation: Animator) {
                 activeAnimator = null
                 (to ?: from)!!.post { finishActiveTransition() }
             }
@@ -86,9 +87,4 @@ internal abstract class AnimatorTransition(
         activeTransitionListener?.onTransitionFinished()
         activeTransitionListener = null
     }
-
-    companion object {
-        const val DURATION_DEFAULT = 300L
-    }
-
 }

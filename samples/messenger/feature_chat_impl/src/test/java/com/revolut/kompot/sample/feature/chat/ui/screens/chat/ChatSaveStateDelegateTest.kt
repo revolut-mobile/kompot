@@ -11,26 +11,26 @@ class ChatSaveStateDelegateTest {
 
     @Test
     fun `get retained state from domain state`() {
-        val domainState = ChatScreenContract.DomainState(
+        val domainState = ChatContract.DomainState(
             contact = createSampleContact(),
             messages = listOf(createSampleMessage()),
             messageInputText = "message text"
         )
 
-        val expected = ChatScreenContract.RetainedState("message text")
+        val expected = ChatContract.RetainedState("message text")
 
         assertEquals(expected, savedStateDelegate.getRetainedState(domainState))
     }
 
     @Test
     fun `get domain state from initial state and retained state`() {
-        val initialState = ChatScreenContract.DomainState(
+        val initialState = ChatContract.DomainState(
             contact = createSampleContact(),
             messages = listOf(createSampleMessage()),
             messageInputText = ""
         )
 
-        val retainedState = ChatScreenContract.RetainedState("message text")
+        val retainedState = ChatContract.RetainedState("message text")
 
         val expected = initialState.copy(
             messageInputText = "message text"

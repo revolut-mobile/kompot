@@ -80,6 +80,11 @@ internal class FlowAssertionImpl<T>(
         assertTrue({ throwableClass.isInstance(actualThrowable) }, "expected $throwableClass but was ${actualThrowable?.javaClass}")
         return this
     }
+
+    override fun assertNoErrors(): FlowAssertion<T> {
+        assertTrue({ testState !is TestState.Error }, "Expected no errors but got ${(testState as? TestState.Error)?.throwable}")
+        return this
+    }
 }
 
 fun <T> FlowAssertion<T>.assertLatestValue(predicate: (actualValue: T) -> Boolean) =

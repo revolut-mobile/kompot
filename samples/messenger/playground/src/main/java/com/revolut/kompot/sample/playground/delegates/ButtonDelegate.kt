@@ -21,7 +21,7 @@ class ButtonDelegate : BaseRecyclerViewDelegate<ButtonDelegate.Model, ButtonDele
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.delegate_button, parent, false))
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>?) {
+    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>) {
         super.onBindViewHolder(holder, data, pos, payloads)
 
         val currentPayloads = payloads?.mapNotNull { it as? Payload }

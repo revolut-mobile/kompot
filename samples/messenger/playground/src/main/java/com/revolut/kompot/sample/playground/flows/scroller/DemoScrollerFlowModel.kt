@@ -1,7 +1,6 @@
 package com.revolut.kompot.sample.playground.flows.scroller
 
 import android.graphics.Color
-import com.revolut.kompot.ExperimentalKompotApi
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.flow.scroller.BaseScrollerFlowModel
@@ -12,9 +11,7 @@ import com.revolut.kompot.sample.playground.screens.demo.DemoScreen
 import com.revolut.kompot.sample.playground.screens.demo.DemoScreenContract
 import javax.inject.Inject
 
-@OptIn(ExperimentalKompotApi::class)
-class DemoScrollerFlowModel @Inject constructor() :
-    BaseScrollerFlowModel<Step, IOData.EmptyOutput>(), FlowModelApi {
+class DemoScrollerFlowModel @Inject constructor() : BaseScrollerFlowModel<Step, IOData.EmptyOutput>(), FlowModelApi {
 
     override val initialSteps = Steps(Step.FirstStep, Step.SecondStep, Step.ThirdStep)
 

@@ -6,6 +6,7 @@ apply from: '../default_impl_lib_config.gradle'
 apply from: '../kompot_sample_dependencies.gradle'
 
 android {
+    namespace "com.revolut.kompot.sample.feature.chat"
 
     testOptions {
         unitTests.returnDefaultValues = true

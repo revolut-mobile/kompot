@@ -26,6 +26,7 @@ internal interface ControllerViewHolder {
     val container: ViewGroup
 
     fun add(view: View)
+    fun addToBottom(view: View)
 
     /**
      * Runs transition form the views specified in params

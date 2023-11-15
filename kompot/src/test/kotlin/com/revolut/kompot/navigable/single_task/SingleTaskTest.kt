@@ -226,7 +226,6 @@ internal class SingleTaskTest {
         dispatchBlockingTest {
             val action = suspend {
                 with(testControllerModel) {
-                    @Suppress("IMPLICIT_NOTHING_TYPE_ARGUMENT_IN_RETURN_POSITION")
                     testSingleTask("") {
                         throw IllegalStateException()
                     }

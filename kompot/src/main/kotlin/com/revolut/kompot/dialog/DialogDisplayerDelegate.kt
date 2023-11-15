@@ -34,7 +34,6 @@ abstract class DialogDisplayerDelegate<Model : DialogModel<*>> {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    @Suppress("UNCHECKED_CAST")
     fun <Result : DialogModelResult> showDialog(dialogModel: DialogModel<*>): Flow<Result> {
         showDialogInternal(dialogModel as Model)
         return startObservingResult().map { it as Result }

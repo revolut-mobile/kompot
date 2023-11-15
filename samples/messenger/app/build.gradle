@@ -5,10 +5,12 @@ apply plugin: 'kotlin-kapt'
 apply from: '../kompot_sample_dependencies.gradle'
 
 android {
+    namespace "com.revolut.kompot.sample"
+
     defaultConfig {
         applicationId "com.revolut.kompot.sample"
         compileSdkVersion kompot_sample.compileSdkVersion
-        buildToolsVersion kompot_sample.androidBuildToolsVersion
+        buildToolsVersion kompot_sample.buildToolsVersion
         targetSdkVersion kompot_sample.targetSdkVersion
         minSdkVersion kompot_sample.minSdkVersion
         versionCode 1
@@ -32,7 +34,11 @@ android {
         exclude 'META-INF/LICENSE.md'
         exclude 'META-INF/LICENSE-notice.md'
     }
-
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+        }
+    }
 }
 
 dependencies {

@@ -17,7 +17,9 @@
 package com.revolut.kompot.coroutines
 
 import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.coroutines.CoroutineContext
 
 object AppDispatchers {
@@ -44,4 +46,18 @@ object AppDispatchers {
 
     @VisibleForTesting
     var dispatcherOverride: (() -> CoroutineContext) -> CoroutineContext = { it() }
+}
+
+/**
+ * A dispatcher that executes the computations immediately in the thread that requests it.
+ *
+ * This dispatcher is similar to [Dispatchers.Unconfined] but does not attempt to avoid stack overflows.
+ */
+@ExperimentalCoroutinesApi
+val Dispatchers.Direct: CoroutineDispatcher get() = DirectDispatcher
+
+private object DirectDispatcher : CoroutineDispatcher() {
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+        block.run()
+    }
 }

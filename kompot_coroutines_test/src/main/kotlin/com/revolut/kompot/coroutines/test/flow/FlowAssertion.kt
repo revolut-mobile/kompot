@@ -51,6 +51,8 @@ interface FlowAssertion<T> {
         throwable: Throwable
     ): FlowAssertion<T>
 
+    fun assertNoErrors(): FlowAssertion<T>
+
     fun <R : Throwable> assertError(
         throwableClass: Class<R>
     ): FlowAssertion<T>

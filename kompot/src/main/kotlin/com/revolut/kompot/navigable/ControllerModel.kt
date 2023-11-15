@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalKompotApi::class)
+
 package com.revolut.kompot.navigable
 
 import android.os.SystemClock
 import androidx.annotation.CallSuper
-import com.revolut.kompot.BuildConfig
+import com.revolut.kompot.ExperimentalKompotApi
+import com.revolut.kompot.common.ControllerDescriptor
 import com.revolut.kompot.common.ErrorEvent
 import com.revolut.kompot.common.ErrorEventResult
 import com.revolut.kompot.common.Event
@@ -29,36 +32,41 @@ import com.revolut.kompot.common.InternalDestination
 import com.revolut.kompot.common.LifecycleEvent
 import com.revolut.kompot.common.ModalDestination
 import com.revolut.kompot.common.NavigationDestination
-import com.revolut.kompot.common.handleNavigationEvent
+import com.revolut.kompot.common.NavigationRequest
 import com.revolut.kompot.dialog.DialogDisplayer
 import com.revolut.kompot.dialog.DialogModel
 import com.revolut.kompot.dialog.DialogModelResult
 import com.revolut.kompot.navigable.cache.ControllersCache
 import com.revolut.kompot.navigable.flow.Flow
+import com.revolut.kompot.navigable.flow.scroller.ScrollerFlow
 import com.revolut.kompot.navigable.screen.Screen
-import com.revolut.kompot.navigable.utils.single_task.IllegalConcurrentAccessException
+import com.revolut.kompot.navigable.utils.collectTillFinish
+import com.revolut.kompot.navigable.utils.collectTillHide
+import com.revolut.kompot.navigable.utils.getController
+import com.revolut.kompot.navigable.utils.hideAllDialogs
+import com.revolut.kompot.navigable.utils.hideDialog
+import com.revolut.kompot.navigable.utils.navigate
+import com.revolut.kompot.navigable.utils.setBlockingLoadingVisibility
+import com.revolut.kompot.navigable.utils.showDialog
+import com.revolut.kompot.navigable.utils.showModal
+import com.revolut.kompot.navigable.utils.singleTask
 import com.revolut.kompot.navigable.utils.single_task.SingleTasksRegistry
+import com.revolut.kompot.navigable.utils.tillFinish
+import com.revolut.kompot.navigable.utils.tillHide
+import com.revolut.kompot.navigable.utils.withLoading
+import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.utils.ContextId
 import com.revolut.kompot.utils.ContextId.CreatedScopeContextId
 import com.revolut.kompot.utils.ContextId.ShownScopeContextId
 import com.revolut.kompot.utils.ControllerScope
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
-import kotlinx.coroutines.withContext
-import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 abstract class ControllerModel {
 
@@ -90,13 +98,16 @@ abstract class ControllerModel {
     protected val lastLifecycleEvent: LifecycleEvent?
         get() = _lastLifecycleEvent
 
+    private lateinit var extensions: Set<ControllerModelExtension>
+
     private val singleTasksRegistry = SingleTasksRegistry()
 
     open fun injectDependencies(
         dialogDisplayer: DialogDisplayer,
         eventsDispatcher: EventsDispatcher,
         controllersCache: ControllersCache,
-        mainDispatcher: CoroutineDispatcher = Dispatchers.Unconfined
+        mainDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+        controllerModelExtensions: Set<ControllerModelExtension> = emptySet(),
     ) {
         _dialogDisplayer = dialogDisplayer
         _eventsDispatcher = eventsDispatcher
@@ -105,14 +116,12 @@ abstract class ControllerModel {
 
         _shownScope += mainDispatcher
         _createdScope += mainDispatcher
+
+        extensions = controllerModelExtensions.onEach { extension -> extension.init(this) }
     }
 
     open fun setBlockingLoadingVisibility(visible: Boolean, immediate: Boolean = false) {
-        if (visible) {
-            dialogDisplayer.showLoadingDialog(if (immediate) 0 else 1000)
-        } else {
-            dialogDisplayer.hideLoadingDialog()
-        }
+        setBlockingLoadingVisibility(dialogDisplayer, visible, immediate)
     }
 
     @CallSuper
@@ -122,21 +131,25 @@ abstract class ControllerModel {
             LifecycleEvent.SHOWN -> {
                 onShown(if (hideTime > 0L) (SystemClock.elapsedRealtime() - hideTime) else 0L)
             }
+
             LifecycleEvent.HIDDEN -> {
                 hideTime = SystemClock.elapsedRealtime()
                 shownScope.coroutineContext.cancelChildren()
                 onHiddenCleanUp()
                 onHidden()
             }
+
             LifecycleEvent.CREATED -> {
                 onCreated()
             }
+
             LifecycleEvent.FINISHED -> {
                 createdScope.coroutineContext.cancelChildren()
                 onFinishedCleanUp()
                 onFinished()
             }
         }
+        extensions.forEach { it.onParentLifecycleEvent(event) }
     }
 
     open fun onHiddenCleanUp() = Unit
@@ -155,129 +168,59 @@ abstract class ControllerModel {
         handleError: suspend (Throwable) -> Boolean = { false },
         onSuccessCompletion: suspend () -> Unit = {},
         onEach: suspend (T) -> Unit = {}
-    ): Job {
-        assertWrongLaunchTillHide(
-            methodName = "collectTillHide",
-            createdScopeAlternative = "collectTillFinish"
-        )
-        return launchInScope(shownScope, handleError, onSuccessCompletion, onEach)
-    }
+    ): Job = collectTillHide(
+        eventsDispatcher = eventsDispatcher,
+        lastLifecycleEvent = lastLifecycleEvent,
+        shownScope = shownScope,
+        handleError = handleError,
+        onSuccessCompletion = onSuccessCompletion,
+        onEach = onEach,
+    )
 
     protected fun <T> kotlinx.coroutines.flow.Flow<T>.collectTillFinish(
         handleError: suspend (Throwable) -> Boolean = { false },
         onSuccessCompletion: suspend () -> Unit = {},
         onEach: suspend (T) -> Unit = {}
-    ): Job {
-        assertWrongLaunchTillFinish(
-            methodName = "collectTillFinish",
-            shownScopeAlternative = "collectTillHide"
-        )
-        return launchInScope(createdScope, handleError, onSuccessCompletion, onEach)
-    }
-
-    private fun <T> kotlinx.coroutines.flow.Flow<T>.launchInScope(
-        scope: CoroutineScope,
-        handleError: suspend (Throwable) -> Boolean = { false },
-        onSuccessCompletion: suspend () -> Unit = {},
-        onEach: suspend (T) -> Unit = {}
-    ): Job =
-        onEach(onEach)
-            .onCompletion { cause ->
-                if (cause == null) onSuccessCompletion()
-            }
-            .catch { cause ->
-                if (!handleError(cause)) {
-                    sendErrorEvent(cause)
-                }
-            }
-            .launchIn(scope)
+    ): Job = collectTillFinish(
+        eventsDispatcher = eventsDispatcher,
+        lastLifecycleEvent = lastLifecycleEvent,
+        createdScope = createdScope,
+        handleError = handleError,
+        onSuccessCompletion = onSuccessCompletion,
+        onEach = onEach,
+    )
 
     protected fun <T> tillFinish(
         handleError: (Throwable) -> Boolean = { false },
         block: suspend CoroutineScope.() -> T
-    ): Job {
-        assertWrongLaunchTillFinish(
-            methodName = "tillFinish",
-            shownScopeAlternative = "tillHide"
-        )
-
-        val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-            if (!handleError(exception)) {
-                sendErrorEvent(exception)
-            }
-        }
-
-        return createdScope.launch(exceptionHandler) {
-            block()
-        }
-    }
+    ): Job = tillFinish(
+        eventsDispatcher = eventsDispatcher,
+        createdScope = createdScope,
+        lastLifecycleEvent = lastLifecycleEvent,
+        handleError = handleError,
+        block = block,
+    )
 
     protected fun <T> tillHide(
         handleError: (Throwable) -> Boolean = { false },
         block: suspend CoroutineScope.() -> T
-    ): Job {
-        assertWrongLaunchTillHide(
-            methodName = "tillHide",
-            createdScopeAlternative = "tillFinish"
-        )
+    ): Job = tillHide(
+        eventsDispatcher = eventsDispatcher,
+        shownScope = shownScope,
+        lastLifecycleEvent = lastLifecycleEvent,
+        handleError = handleError,
+        block = block,
+    )
 
-        val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-            if (!handleError(exception)) {
-                sendErrorEvent(exception)
-            }
-        }
-
-        return shownScope.launch(exceptionHandler) {
-            block()
-        }
-    }
-
-    protected suspend fun <T> withLoading(block: suspend () -> T): T = withContext(mainDispatcher) {
-        try {
-            setBlockingLoadingVisibility(true)
-            block()
-        } finally {
-            setBlockingLoadingVisibility(false)
-        }
-    }
+    protected suspend fun <T> withLoading(block: suspend () -> T): T = withLoading(
+        dialogDisplayer = dialogDisplayer,
+        mainDispatcher = mainDispatcher,
+        block = block,
+    )
 
     @Suppress("FunctionName")
     private fun ModelScope(contextId: ContextId): CoroutineScope =
         ControllerScope() + mainDispatcher + contextId
-
-    private fun sendErrorEvent(throwable: Throwable) {
-        eventsDispatcher.handleEvent(ErrorEvent(throwable))
-    }
-
-    private fun assertWrongLaunchTillFinish(
-        methodName: String,
-        shownScopeAlternative: String
-    ) {
-        if (BuildConfig.DEBUG) {
-            when (lastLifecycleEvent) {
-                LifecycleEvent.CREATED -> Unit
-                LifecycleEvent.SHOWN -> Timber.e("$methodName is called after onShown, consider to use $shownScopeAlternative [$this]")
-                LifecycleEvent.HIDDEN -> Timber.e("$methodName is called after onHidden $this]")
-                LifecycleEvent.FINISHED -> error("$methodName is called after onFinished [$this]")
-                null -> Timber.e("$methodName is called before onCreate [$this]")
-            }
-        }
-    }
-
-    private fun assertWrongLaunchTillHide(
-        methodName: String,
-        createdScopeAlternative: String
-    ) {
-        if (BuildConfig.DEBUG) {
-            when (lastLifecycleEvent) {
-                LifecycleEvent.CREATED -> Timber.e("$methodName is called before onShown, consider to use $createdScopeAlternative [$this]")
-                LifecycleEvent.SHOWN -> Unit
-                LifecycleEvent.HIDDEN -> error("$methodName is called after onHidden [$this]")
-                LifecycleEvent.FINISHED -> error("$methodName is called after onFinished [$this]")
-                null -> Timber.e("$methodName is called before onCreate [$this]")
-            }
-        }
-    }
 
     open fun handleErrorEvent(throwable: Throwable): Boolean = false
 
@@ -289,68 +232,59 @@ abstract class ControllerModel {
         return null
     }
 
-    fun navigate(internalDestination: InternalDestination<*>) = internalDestination.navigate()
+    fun navigate(internalDestination: InternalDestination<*>) = navigate(eventsDispatcher, internalDestination)
 
-    fun NavigationDestination.navigate() = eventsDispatcher.handleNavigationEvent(this)
+    fun NavigationDestination.navigate() = navigate(eventsDispatcher)
+
+    fun <T : IOData.Output> ControllerDescriptor<T>.getController() = getController(eventsDispatcher)
+
+    suspend fun NavigationRequest.navigate() = navigate(eventsDispatcher)
 
     fun <T : IOData.Output> Screen<T>.showModal(
         style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
         onResult: ((T) -> Unit)? = null
-    ) =
-        eventsDispatcher.handleNavigationEvent(
-            ModalDestination.ExplicitScreen(
-                screen = this,
-                onResult = onResult,
-                style = style
-            )
-        )
+    ) = showModal(eventsDispatcher, style, onResult)
 
     fun <T : IOData.Output> Flow<T>.showModal(
         style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
         onResult: ((T) -> Unit)? = null
-    ) =
-        eventsDispatcher.handleNavigationEvent(
-            ModalDestination.ExplicitFlow(
-                flow = this,
-                onResult = onResult,
-                style = style
-            )
-        )
+    ) = showModal(eventsDispatcher, style, onResult)
+
+    suspend fun <T : IOData.Output> Flow<T>.showModalSuspend(
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    ): T = suspendCoroutine { emitter ->
+        showModal(eventsDispatcher, style, emitter::resume)
+    }
+
+    @OptIn(ExperimentalKompotApi::class)
+    fun <T : IOData.Output> ScrollerFlow<T>.showModal(
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        onResult: ((T) -> Unit)? = null
+    ) = showModal(eventsDispatcher, style, onResult)
+
+    fun <T : IOData.Output> ViewController<T>.showModal(
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        onResult: ((T) -> Unit)? = null
+    ) = showModal(eventsDispatcher, style, onResult)
+
+    suspend fun <T : IOData.Output> Screen<T>.showModalSuspend(
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    ): T = suspendCoroutine { emitter ->
+        showModal(eventsDispatcher, style, emitter::resume)
+    }
 
     fun <Result : DialogModelResult> showDialog(dialogModel: DialogModel<Result>): kotlinx.coroutines.flow.Flow<Result> =
-        dialogDisplayer.showDialog(dialogModel)
+        showDialog(dialogDisplayer, dialogModel)
 
-    fun hideAllDialogs() = dialogDisplayer.hideAllDialogs()
+    fun hideDialog(dialogModel: DialogModel<*>) =
+        hideDialog(dialogDisplayer, dialogModel)
 
-    @OptIn(FlowPreview::class)
+    fun hideAllDialogs() = hideAllDialogs(dialogDisplayer)
+
     protected fun <T> kotlinx.coroutines.flow.Flow<T>.singleTask(taskId: String): kotlinx.coroutines.flow.Flow<T> =
-        flow {
-            if (singleTasksRegistry.acquire(taskId)) {
-                emit(Unit)
-            } else {
-                throw IllegalConcurrentAccessException()
-            }
-        }.flatMapConcat {
-            this
-        }.onCompletion { cause ->
-            if (cause !is IllegalConcurrentAccessException) {
-                singleTasksRegistry.release(taskId)
-            }
-        }.catch { e ->
-            if (e !is IllegalConcurrentAccessException) {
-                throw e
-            }
-        }
+        singleTask(singleTasksRegistry, taskId)
 
     protected suspend fun <T> singleTask(taskId: String, action: suspend () -> T): T? {
-        if (!singleTasksRegistry.acquire(taskId)) {
-            return null
-        }
-
-        return try {
-            action.invoke()
-        } finally {
-            singleTasksRegistry.release(taskId)
-        }
+        return singleTask(singleTasksRegistry, taskId, action)
     }
 }

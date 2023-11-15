@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable.saved_state
 
+import android.os.Bundle
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.dispatchBlockingTest
 import com.revolut.kompot.navigable.screen.BaseScreenModel
@@ -47,7 +48,8 @@ internal class BaseScreenModelSavedStateTest {
             )
         )
 
-        val bundle = screenModel.saveState()
+        val bundle = Bundle()
+        screenModel.saveState(bundle)
 
         val restoredScreenModel = TestBaseScreenModel()
 

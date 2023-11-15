@@ -80,13 +80,32 @@ class ModelBinderTest {
     fun `should not notify a removed observer`() {
         var emissionsCount = 0
         val observer = ModelObserver<Int> {
-            emissionsCount ++
+            emissionsCount++
         }
 
         binder.bind(observer)
         binder.unbind(observer)
 
         assertEquals(0, emissionsCount)
+    }
+
+    @Test
+    fun `stateful model binder propagates latest value to the new subscribers`() {
+        val binder = StatefulModelBinder<String>()
+
+        val firstObserverEmissions = mutableListOf<String>()
+        val secondObserverEmissions = mutableListOf<String>()
+        binder.bind { firstObserverEmissions.add(it) }
+
+        binder.notify("1")
+        binder.notify("2")
+
+        binder.bind { secondObserverEmissions.add(it) }
+
+        binder.notify("3")
+
+        assertEquals(listOf("1", "2", "3"), firstObserverEmissions)
+        assertEquals(listOf("2", "3"), secondObserverEmissions)
     }
 
 }

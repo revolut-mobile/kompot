@@ -10,8 +10,7 @@ import dagger.Component
 
 @FeatureScope
 @Component
-interface PlaygroundFeatureComponent : PlaygroundApi, DemoFlowInjector, DemoScreenInjector,
-    DemoScrollerFlowInjector {
+interface PlaygroundFeatureComponent : PlaygroundApi, DemoFlowInjector, DemoScreenInjector, DemoScrollerFlowInjector {
     @Component.Factory
     interface Builder {
         fun create(): PlaygroundFeatureComponent

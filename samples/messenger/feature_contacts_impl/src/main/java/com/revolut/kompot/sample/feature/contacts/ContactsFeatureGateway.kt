@@ -7,7 +7,7 @@ import com.revolut.kompot.navigable.flow.BaseFlowModel
 import com.revolut.kompot.sample.feature.contacts.di.ContactsApiProvider
 import com.revolut.kompot.sample.feature.contacts.di.ContactsArguments
 import com.revolut.kompot.sample.feature.contacts.navigation.ContactListNavigationDestination
-import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.ContactListScreen
+import com.revolut.kompot.sample.feature.contacts.ui.screens.contacts.ContactListViewController
 
 class ContactsFeatureGateway(argsProvider: () -> ContactsArguments) : FeatureGateway {
 
@@ -19,12 +19,11 @@ class ContactsFeatureGateway(argsProvider: () -> ContactsArguments) : FeatureGat
         destination: NavigationDestination,
         flowModel: BaseFlowModel<*, *, *>
     ): Controller? = when (destination) {
-        ContactListNavigationDestination -> ContactListScreen()
+        ContactListNavigationDestination -> ContactListViewController()
         else -> null
     }
 
     override fun clearReference() {
         ContactsApiProvider.clear()
     }
-
 }

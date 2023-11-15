@@ -22,6 +22,8 @@ import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Interpolator
+import androidx.core.view.doOnLayout
+import com.revolut.kompot.navigable.transition.Transition.Companion.DURATION_DEFAULT
 
 internal class ModalShiftTransition(
     private val style: ModalAnimatable.Style
@@ -41,22 +43,27 @@ internal class ModalShiftTransition(
 
     override fun start(from: View?, to: View?, backward: Boolean, transitionListener: TransitionListener) {
         transitionListener.onTransitionCreated()
-        transitionListener.onTransitionStart()
         if (!backward) {
             getAnimatable(to)?.let { animatable ->
                 animatable.style = style
-                animatable.show {
-                    transitionListener.onTransitionEnd()
-                    transitionListener.onTransitionFinished()
+                animatable.view.doOnLayout {
+                    transitionListener.onTransitionStart()
+                    animatable.show {
+                        transitionListener.onTransitionEnd()
+                        transitionListener.onTransitionFinished()
+                    }
                 }
             }
         } else {
-            val modalAnimatable = getAnimatable(from)
-            if (modalAnimatable != null) {
-                modalAnimatable.let { animatable ->
-                    animatable.hide {
-                        transitionListener.onTransitionEnd()
-                        transitionListener.onTransitionFinished()
+            val animatable = getAnimatable(from)
+            if (animatable != null) {
+                animatable.let { animatable ->
+                    animatable.view.doOnLayout {
+                        transitionListener.onTransitionStart()
+                        animatable.hide {
+                            transitionListener.onTransitionEnd()
+                            transitionListener.onTransitionFinished()
+                        }
                     }
                 }
             } else {
@@ -65,9 +72,9 @@ internal class ModalShiftTransition(
                 transitionListener.onTransitionStart()
                 val animator = ObjectAnimator.ofFloat(from, View.ALPHA, 0f)
                 animator.interpolator = interpolator
-                animator.duration = AnimatorTransition.DURATION_DEFAULT
+                animator.duration = DURATION_DEFAULT
                 animator.addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator?) {
+                    override fun onAnimationEnd(animation: Animator) {
                         (to ?: from)!!.post {
                             transitionListener.onTransitionEnd()
                             transitionListener.onTransitionFinished()

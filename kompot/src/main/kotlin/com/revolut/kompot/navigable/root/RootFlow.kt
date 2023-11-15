@@ -18,10 +18,8 @@ package com.revolut.kompot.navigable.root
 
 import android.view.View
 import androidx.core.view.isVisible
-import com.revolut.kompot.ExperimentalBottomDialogStyle
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.ModalDestination
-import com.revolut.kompot.dialog.DefaultLoadingDialogDisplayer
 import com.revolut.kompot.dialog.DialogDisplayer
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
@@ -29,17 +27,11 @@ import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.flow.BaseFlow
 import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.ControllerContainerFrameLayout
 
-abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: INPUT_DATA) :
-    BaseFlow<STEP, INPUT_DATA, IOData.EmptyOutput>(inputData) {
-
-    open val rootDialogDisplayer by lazy(LazyThreadSafetyMode.NONE) {
-        DialogDisplayer(
-            loadingDialogDisplayer = DefaultLoadingDialogDisplayer(activity),
-            delegates = emptyList()
-        )
-    }
+abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: INPUT_DATA) : BaseFlow<STEP, INPUT_DATA, IOData.EmptyOutput>(inputData) {
+    abstract val rootDialogDisplayer: DialogDisplayer
 
     abstract val containerForModalNavigation: ControllerContainerFrameLayout
 
@@ -76,12 +68,8 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
         rootDialogDisplayer.onDetach()
     }
 
-    @OptIn(ExperimentalBottomDialogStyle::class)
-    internal fun open(
-        controller: Controller,
-        style: ModalDestination.Style,
-        parentController: Controller?
-    ) {
+    internal fun open(controller: Controller, style: ModalDestination.Style, parentController: Controller?) {
+        containerForModalNavigation.containerId = ControllerContainer.MODAL_CONTAINER_ID
         containerForModalNavigation.isVisible = true
         getFirstAvailableModalManager().show(
             controller = controller,
@@ -105,14 +93,11 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
                         TransitionAnimation.FADE
             },
             backward = false,
-            parentController = parentController ?: this
+            parentController = parentController ?: this,
         )
     }
 
-    override fun onChildControllerAttached(
-        controller: Controller,
-        controllerManager: ControllerManager
-    ) {
+    override fun onChildControllerAttached(controller: Controller, controllerManager: ControllerManager) {
         super.onChildControllerAttached(controller, controllerManager)
         if (controllerManager.modal) {
             modalManagersCount++
@@ -123,10 +108,7 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
         }
     }
 
-    override fun onChildControllerDetached(
-        controller: Controller,
-        controllerManager: ControllerManager
-    ) {
+    override fun onChildControllerDetached(controller: Controller, controllerManager: ControllerManager) {
         super.onChildControllerDetached(controller, controllerManager)
         if (controllerManager.modal) {
             modalManagersCount--
@@ -137,13 +119,13 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
     }
 
     private fun getFirstAvailableModalManager(): ControllerManager =
-        getChildControllerManager(containerForModalNavigation, "modal_N${modalManagersCount}")
+        getOrCreateChildControllerManager(containerForModalNavigation, "modalControllerManager_N${modalManagersCount}")
 
     override fun updateUi(step: STEP) = Unit
 
     override fun handleQuit() {
         if (!flowModel.hasBackStack) {
-            activity.finish()
+            handleQuitOnEmptyBackStack()
         } else {
             super.handleQuit()
         }
@@ -154,6 +136,10 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
             handleBackOnEmptyBackStack()
         }
         return BackHandleResult.INTERCEPTED
+    }
+
+    protected open fun handleQuitOnEmptyBackStack() {
+        activity.finish()
     }
 
     protected open fun handleBackOnEmptyBackStack() {

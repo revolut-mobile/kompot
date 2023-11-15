@@ -1,8 +1,8 @@
 ext {
-    androidBuildToolsVersion = '30.0.3'
-    androidMinSdkVersion = 23
+    androidBuildToolsVersion = '33.0.2'
+    androidMinSdkVersion = 24
     androidTargetSdkVersion = 31
-    androidCompileSdkVersion = 31
+    androidCompileSdkVersion = 33
 
     kotlinVersion = '1.6.10'
 
@@ -10,15 +10,16 @@ ext {
 
     daggerVersion = '2.35.1'
 
-    recyclerKitRxDiffAdapterVersion = '1.0.7'
-    recyclerKitDecorationsVersion = '1.0.8'
-    recyclerKitDelegatesVersion = '1.0.10'
+    recyclerKitRxDiffAdapterVersion = '1.0.8'
+    recyclerKitDecorationsVersion = '1.0.9'
+    recyclerKitDelegatesVersion = '1.0.11'
 
-    timberVersion = '4.7.1'
+    timberVersion = '5.0.1'
 
     androidxCoreVersion = '1.7.0'
     appCompatVersion = '1.1.0'
     recyclerVersion = '1.1.0'
+    androidxTestVersion = '1.5.0'
     constraintLayoutVersion = '1.1.3'
     coordinatorLayoutVersion = '1.1.0'
 
@@ -27,7 +28,7 @@ ext {
     junitVersion = '4.12'
     junitJupiterVersion = '5.4.2'
     junitVintageVersion = '5.4.2'
-    mockitoVersion = '3.9.0'
+    mockitoVersion = '5.1.1'
     mockitoKotlinVersion = '2.2.0'
 
     robolectricVersion = '4.5'

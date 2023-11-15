@@ -13,7 +13,7 @@ import dagger.Subcomponent
 interface RootFlowComponent : BaseFlowComponent {
     val flowModel: RootFlowContract.FlowModelApi
 
-    val featureRegistry: FeaturesRegistry
+    val featuresRegistry: FeaturesRegistry
 
     @Subcomponent.Builder
     interface Builder : BaseFlowComponent.Builder<RootFlowComponent, Builder>

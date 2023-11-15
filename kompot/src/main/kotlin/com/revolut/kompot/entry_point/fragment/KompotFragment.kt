@@ -30,6 +30,14 @@ import com.revolut.kompot.navigable.hooks.ControllerHook
 
 abstract class KompotFragment : Fragment() {
 
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            isEnabled = false
+            kompotDelegate.onBackPressed()
+            isEnabled = true
+        }
+    }
+
     abstract fun config(): KompotConfig
 
     internal val kompotDelegate: KompotDelegate by lazy(LazyThreadSafetyMode.NONE) {
@@ -48,7 +56,13 @@ abstract class KompotFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         kompotDelegate.onViewCreated(this)
 
-        requireActivity().onBackPressedDispatcher.addCallback(this.viewLifecycleOwner, getBackPressInterceptor())
+        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
+    }
+
+    @CallSuper
+    override fun onDestroyView() {
+        onBackPressedCallback.remove()
+        super.onDestroyView()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -59,17 +73,6 @@ abstract class KompotFragment : Fragment() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         kompotDelegate.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    }
-
-    private fun getBackPressInterceptor(): OnBackPressedCallback {
-        val enabled = true
-        return object : OnBackPressedCallback(enabled) {
-            override fun handleOnBackPressed() {
-                isEnabled = false
-                kompotDelegate.onBackPressed()
-                isEnabled = true
-            }
-        }
     }
 
 }

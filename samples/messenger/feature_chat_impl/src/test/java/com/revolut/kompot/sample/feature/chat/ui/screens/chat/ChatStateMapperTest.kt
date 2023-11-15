@@ -8,8 +8,8 @@ import com.revolut.kompot.sample.feature.chat.data.USER_ID
 import com.revolut.kompot.sample.feature.contacts.domain.Contact
 import com.revolut.kompot.sample.feature.chat.domain.Message
 import com.revolut.kompot.sample.feature.chat.ui.delegates.MessageRowDelegate
-import com.revolut.kompot.sample.feature.chat.ui.screens.chat.ChatScreenContract.DomainState
-import com.revolut.kompot.sample.feature.chat.ui.screens.chat.ChatScreenContract.UIState
+import com.revolut.kompot.sample.feature.chat.ui.screens.chat.ChatContract.DomainState
+import com.revolut.kompot.sample.feature.chat.ui.screens.chat.ChatContract.UIState
 import com.revolut.kompot.sample.utils.date.printer.DatePrinter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

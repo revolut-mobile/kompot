@@ -12,18 +12,26 @@ import com.revolut.kompot.sample.feature.chat.R
 import com.revolut.recyclerkit.delegates.BaseRecyclerViewDelegate
 import com.revolut.recyclerkit.delegates.BaseRecyclerViewHolder
 import com.revolut.recyclerkit.delegates.ListItem
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class MessageRowDelegate : BaseRecyclerViewDelegate<MessageRowDelegate.Model, MessageRowDelegate.ViewHolder>(
     R.layout.delegate_message,
     { _, data -> data is Model }
 ) {
 
+    private val onItemClicksSharedFlow by lazy(LazyThreadSafetyMode.NONE) {
+        MutableSharedFlow<String>(extraBufferCapacity = 1)
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.delegate_message, parent, false))
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>?) {
+    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>) {
         super.onBindViewHolder(holder, data, pos, payloads)
+        holder.itemView.setOnClickListener { onItemClicksSharedFlow.tryEmit(data.listId) }
 
         if (payloads.isNullOrEmpty()) {
             holder.text.text = data.text
@@ -47,6 +55,8 @@ class MessageRowDelegate : BaseRecyclerViewDelegate<MessageRowDelegate.Model, Me
             }
         }
     }
+
+    fun observeItemClicksStream(): Flow<String> = onItemClicksSharedFlow.asSharedFlow()
 
     class ViewHolder(itemView: View) : BaseRecyclerViewHolder(itemView) {
         private val layoutMessage: ConstraintLayout = itemView.findViewById(R.id.layoutMessage)

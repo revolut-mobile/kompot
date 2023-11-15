@@ -16,13 +16,26 @@
 
 package com.revolut.kompot
 
+import com.revolut.kompot.lifecycle.ControllerLifecycleCallbacks
 import com.revolut.kompot.navigable.Controller
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 object KompotPlugin {
-    internal val controllerShownSharedFlow = MutableSharedFlow<Controller>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
-    fun controllerShowingStream(): Flow<Controller> = controllerShownSharedFlow
+    internal val controllerShownSharedFlow = MutableSharedFlow<Controller>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    internal val controllerLifecycleCallbacks = mutableListOf<ControllerLifecycleCallbacks>()
+
+    @Deprecated("Use registerControllerLifecycleCallbacks with ControllerLifecycleCallbacks.onControllerAttached")
+    fun controllerShowingStream(): Flow<Controller> = controllerShownSharedFlow.distinctUntilChanged()
+
+    fun registerControllerLifecycleCallbacks(callbacks: ControllerLifecycleCallbacks) {
+        controllerLifecycleCallbacks.add(callbacks)
+    }
+
+    fun unregisterControllerLifecycleCallbacks(callbacks: ControllerLifecycleCallbacks) {
+        controllerLifecycleCallbacks.remove(callbacks)
+    }
 }

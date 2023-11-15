@@ -18,7 +18,7 @@ class PlaygroundFeatureGateway(argsProvider: () -> PlaygroundArguments) : Featur
         destination: NavigationDestination,
         flowModel: BaseFlowModel<*, *, *>
     ): Controller? = when (destination) {
-        is DemoFlowDestination -> DemoFlow()
+        DemoFlowDestination -> DemoFlow()
         else -> null
     }
 

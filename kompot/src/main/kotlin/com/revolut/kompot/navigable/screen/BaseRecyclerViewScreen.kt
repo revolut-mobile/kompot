@@ -21,6 +21,9 @@ import android.os.Parcelable
 import android.view.View
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
+import androidx.annotation.RestrictTo
+import androidx.annotation.RestrictTo.Scope.TESTS
+import androidx.annotation.VisibleForTesting
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -42,6 +45,9 @@ abstract class BaseRecyclerViewScreen<
     override val layoutId: Int = R.layout.screen_recycler_view
 
     protected abstract val delegates: List<RecyclerViewDelegate<*, *>>
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    @get:RestrictTo(TESTS)
+    val delegatesForTesting: List<RecyclerViewDelegate<*, *>> get() = delegates
     protected lateinit var recyclerView: RecyclerView
     @IdRes
     protected open val recyclerViewId: Int = R.id.recyclerView

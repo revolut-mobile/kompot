@@ -17,9 +17,15 @@
 package com.revolut.kompot.di.flow
 
 import com.revolut.kompot.navigable.flow.BaseFlow
+import com.revolut.kompot.navigable.flow.FlowExtensionsInjector
+import com.revolut.kompot.navigable.flow.FlowModelExtensionsInjector
 import dagger.BindsInstance
 
-interface BaseFlowComponent : ParentFlowComponent {
+interface BaseFlowComponent :
+    ControllerComponent,
+    FlowExtensionsInjector,
+    FlowModelExtensionsInjector {
+
     interface Builder<T : BaseFlowComponent, B> {
 
         @BindsInstance

@@ -16,12 +16,35 @@
 
 package com.revolut.kompot.navigable
 
-enum class TransitionAnimation {
-    NONE,
-    SLIDE_RIGHT_TO_LEFT,
-    SLIDE_LEFT_TO_RIGHT,
-    FADE,
-    MODAL_FADE,
-    MODAL_SLIDE,
-    BOTTOM_DIALOG_SLIDE,
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+sealed interface TransitionAnimation : Parcelable {
+
+    val indefinite: Boolean get() = false
+
+    @Parcelize
+    object NONE : TransitionAnimation
+
+    @Parcelize
+    object SLIDE_RIGHT_TO_LEFT : TransitionAnimation
+
+    @Parcelize
+    object SLIDE_LEFT_TO_RIGHT : TransitionAnimation
+
+    @Parcelize
+    object FADE : TransitionAnimation
+
+    @Parcelize
+    object MODAL_FADE : TransitionAnimation
+
+    @Parcelize
+    object MODAL_SLIDE : TransitionAnimation
+
+    @Parcelize
+    object BOTTOM_DIALOG_SLIDE : TransitionAnimation
+
+    interface Custom : TransitionAnimation {
+        val providerId: Int
+    }
 }

@@ -19,8 +19,11 @@ package com.revolut.kompot.navigable
 import android.app.Activity
 import android.view.LayoutInflater
 import android.view.View
+import androidx.lifecycle.Lifecycle
 import com.nhaarman.mockitokotlin2.doReturn
+import com.nhaarman.mockitokotlin2.inOrder
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -244,6 +247,51 @@ internal class ControllerTest {
         }
     }
 
+    @Test
+    fun `controller extensions are initiated on attach`() {
+        with(TestController()) {
+            onCreate()
+            onAttach()
+
+            verify(controllerExtensions.first()).init(attachedScope)
+        }
+    }
+
+    @Test
+    fun `call controller extensions' onParentLifecycleEvent method on any controller's lifecycle method call`() {
+        with(TestController()) {
+            onCreate()
+            onAttach()
+            onDetach()
+            onDestroy()
+
+            controllerExtensions.first().inOrder {
+                verify().onParentLifecycleEvent(Lifecycle.Event.ON_CREATE)
+                verify().onParentLifecycleEvent(Lifecycle.Event.ON_RESUME)
+                verify().onParentLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+                verify().onParentLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            }
+        }
+    }
+
+    @Test
+    fun `GIVEN registered exit transition callback WHEN exit transition ends multiple times THEN trigger callback once`() {
+        with(TestController()) {
+            var callbackInvocationsCount = 0
+            doOnNextExitTransition { callbackInvocationsCount ++ }
+
+            onTransitionStart(enter = false)
+            onTransitionEnd(enter = false)
+
+            assertEquals(1, callbackInvocationsCount)
+
+            onTransitionStart(enter = false)
+            onTransitionEnd(enter = false)
+
+            assertEquals(1, callbackInvocationsCount)
+        }
+    }
+
     private fun CoroutineScope.childrenCount() = coroutineContext.job.children.count()
 
     inner class TestController : Controller() {
@@ -253,6 +301,8 @@ internal class ControllerTest {
         override fun createView(inflater: LayoutInflater): View {
             return view
         }
+
+        override val controllerExtensions: Set<ControllerExtension> = setOf(mock())
 
         init {
             val mockedActivity = mock<Activity> {

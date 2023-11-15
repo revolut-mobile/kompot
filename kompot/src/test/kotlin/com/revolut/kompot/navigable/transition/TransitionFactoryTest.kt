@@ -17,6 +17,7 @@
 package com.revolut.kompot.navigable.transition
 
 import com.revolut.kompot.navigable.TransitionAnimation
+import kotlinx.parcelize.Parcelize
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -43,10 +44,19 @@ internal class TransitionFactoryTest {
         @JvmStatic
         fun transitionCreationTestArgs() = arrayOf(
             arrayOf(TransitionAnimation.NONE, ImmediateTransition::class),
-            arrayOf(TransitionAnimation.SLIDE_RIGHT_TO_LEFT, SlideTransition::class),
             arrayOf(TransitionAnimation.SLIDE_LEFT_TO_RIGHT, SlideTransition::class),
+            arrayOf(TransitionAnimation.SLIDE_RIGHT_TO_LEFT, SlideTransition::class),
             arrayOf(TransitionAnimation.FADE, FadeTransition::class),
+            arrayOf(TransitionAnimation.MODAL_SLIDE, ModalShiftTransition::class),
+            arrayOf(TransitionAnimation.MODAL_FADE, ModalShiftTransition::class),
+            arrayOf(TransitionAnimation.BOTTOM_DIALOG_SLIDE, ModalShiftTransition::class),
+            arrayOf(TestCustomTransitionAnimation, CustomTransition::class),
         )
+    }
+
+    @Parcelize
+    private object TestCustomTransitionAnimation : TransitionAnimation.Custom {
+        override val providerId: Int get() = 0
     }
 
 }

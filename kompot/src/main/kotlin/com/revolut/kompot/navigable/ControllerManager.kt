@@ -21,7 +21,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.view.LayoutInflater
 import androidx.annotation.LayoutRes
-import com.revolut.kompot.KompotPlugin
+import androidx.core.view.contains
 import com.revolut.kompot.holder.ControllerTransaction
 import com.revolut.kompot.holder.ControllerViewHolder
 import com.revolut.kompot.navigable.cache.ControllersCache
@@ -34,6 +34,7 @@ internal open class ControllerManager(
     internal val controllerViewHolder: ControllerViewHolder,
     internal val onAttachController: ChildControllerListener? = null,
     internal val onDetachController: ChildControllerListener? = null,
+    private val onTransitionCanceled: CanceledTransitionListener? = null
 ) {
 
     init {
@@ -77,7 +78,7 @@ internal open class ControllerManager(
         controller: Controller,
         animation: TransitionAnimation,
         backward: Boolean,
-        parentController: Controller?
+        parentController: Controller?,
     ) {
         val oldController = _activeController
         _activeController = controller
@@ -86,7 +87,16 @@ internal open class ControllerManager(
 
         val context = controllerViewHolder.container.context
         val controllerView = controller.getOrCreateView(LayoutInflater.from(context))
-        controllerViewHolder.add(controllerView)
+        if (controllerViewHolder.container.contains(controllerView).not() && controllerView.parent != null){
+            val cache = controllersCache.getCacheLogWithKeys()
+            // Throwing exception is okay since the app is going to crash anyway.
+            throw IllegalStateException("Can’t show controller because it’s already attached to another flow. ${controller.fullControllerName} key: ${controller.key.value} \n $cache")
+        }
+        if (backward) {
+            controllerViewHolder.addToBottom(controllerView)
+        } else {
+            controllerViewHolder.add(controllerView)
+        }
         if (!controller.created) {
             controller.onCreate()
         }
@@ -95,10 +105,14 @@ internal open class ControllerManager(
             from = oldController.takeIf { oldController != _activeController },
             to = controller,
             controllerManager = this,
-            backward = backward
+            backward = backward,
+            indefinite = animation.indefinite,
         ).startWith(animation)
+    }
 
-        KompotPlugin.controllerShownSharedFlow.tryEmit(controller)
+    internal fun onTransitionCanceled(from: Controller?, backward: Boolean) {
+        _activeController = from
+        onTransitionCanceled?.invoke(backward)
     }
 
     fun removeActiveController() {
@@ -207,3 +221,4 @@ internal open class ControllerManager(
 }
 
 internal typealias ChildControllerListener = (Controller, ControllerManager) -> Unit
+internal typealias CanceledTransitionListener = (backward: Boolean) -> Unit

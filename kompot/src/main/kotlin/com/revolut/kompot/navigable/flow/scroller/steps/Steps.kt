@@ -16,20 +16,20 @@
 
 package com.revolut.kompot.navigable.flow.scroller.steps
 
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.flow.scroller.ScrollerFlowStep
 
-data class Steps<S : FlowStep>(
+data class Steps<S : ScrollerFlowStep>(
     val steps: List<S>,
-    val selected: S = requireNotNull(steps.firstOrNull()) { "Non empty list should be provided for steps" }
+    val selectedStepId: String = requireNotNull(steps.firstOrNull()?.id) { "Non empty list should be provided for steps" }
 ) {
 
     companion object {
-        operator fun <S : FlowStep> invoke(vararg steps: S): Steps<S> = Steps(steps = steps.toList())
+        operator fun <S : ScrollerFlowStep> invoke(vararg steps: S): Steps<S> = Steps(steps = steps.toList())
     }
 }
 
-data class StepsChangeCommand<S : FlowStep>(
+data class StepsChangeCommand<S : ScrollerFlowStep>(
     val steps: List<S>,
-    val selected: S?,
+    val selectedStepId: String?,
     val smoothScroll: Boolean,
 )

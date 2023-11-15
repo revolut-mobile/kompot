@@ -459,7 +459,7 @@ class DefaultControllersCacheTest {
         }
         override val component: BaseFlowComponent
             get() = throw IllegalStateException()
-        override val controllerDelegates: Set<ControllerExtension>
+        override val controllerExtensions: Set<ControllerExtension>
             get() = emptySet()
 
         private val stateWrapper = createSampleStateWrapper()

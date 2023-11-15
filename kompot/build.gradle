@@ -13,6 +13,8 @@ android {
         buildToolsVersion androidBuildToolsVersion
         targetSdkVersion androidTargetSdkVersion
         minSdkVersion androidMinSdkVersion
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     sourceSets {
@@ -37,6 +39,12 @@ android {
             useJUnitPlatform()
         }
     }
+}
+
+tasks.withType(Test) {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    })
 }
 
 dependencies {
@@ -66,6 +74,7 @@ dependencies {
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "androidx.test:core-ktx:$androidxTestVersion"
 
     testImplementation("org.robolectric:robolectric:$robolectricVersion") {
         exclude group: "com.google.auto.service", module: "auto-service"

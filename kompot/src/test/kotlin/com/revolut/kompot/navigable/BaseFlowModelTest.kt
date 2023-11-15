@@ -18,26 +18,35 @@ package com.revolut.kompot.navigable
 
 import android.os.Bundle
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.verify
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.LifecycleEvent
 import com.revolut.kompot.dispatchBlockingTest
 import com.revolut.kompot.navigable.binder.asFlow
+import com.revolut.kompot.navigable.cache.DefaultControllersCache
 import com.revolut.kompot.navigable.flow.Back
-import com.revolut.kompot.navigable.flow.BaseFlowModel
-import com.revolut.kompot.navigable.flow.FlowState
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.flow.FlowNavigationCommand
 import com.revolut.kompot.navigable.flow.Next
 import com.revolut.kompot.navigable.flow.PostFlowResult
+import com.revolut.kompot.navigable.flow.PushControllerCommand
 import com.revolut.kompot.navigable.flow.Quit
 import com.revolut.kompot.navigable.flow.RestorationPolicy
+import com.revolut.kompot.navigable.flow.RestorationState
 import com.revolut.kompot.navigable.flow.StartPostponedStateRestore
+import com.revolut.kompot.navigable.components.TestController
+import com.revolut.kompot.navigable.components.TestFlowModel
+import com.revolut.kompot.navigable.components.TestFlowStep
+import com.revolut.kompot.navigable.components.TestStep
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.parcelize.Parcelize
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -45,6 +54,26 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 internal class BaseFlowModelTest {
+
+    @Test
+    fun `should push initial controller after created`() = dispatchBlockingTest {
+        val flowModel = createTestFlowModel()
+
+        val expectedCommand = PushControllerCommand<TestFlowStep, IOData.EmptyOutput>(
+            controller = TestController("1"),
+            fromSavedState = false,
+            animation = TransitionAnimation.NONE,
+            backward = false,
+            executeImmediately = true,
+        )
+
+        launch {
+            val actualCommand = flowModel.navigationBinder().asFlow().first()
+            assertEquals(expectedCommand, actualCommand)
+        }
+
+        flowModel.onLifecycleEvent(LifecycleEvent.CREATED)
+    }
 
     @Test
     fun `update navigation stream when next step requested`() = dispatchBlockingTest {
@@ -57,8 +86,8 @@ internal class BaseFlowModelTest {
         )
 
         launch {
-            val actual = flowModel.navigationBinder().asFlow().take(1).toList()
-            assertEquals(listOf(expectedCommand), actual)
+            val actual = flowModel.navigationBinder().asFlow().take(2).last()
+            assertEquals(expectedCommand, actual)
         }
 
         flowModel.next(TestStep(1), addCurrentStepToBackStack = true, animation = TransitionAnimation.NONE)
@@ -69,8 +98,8 @@ internal class BaseFlowModelTest {
         val flowModel = createTestFlowModel()
 
         launch {
-            val actual = flowModel.navigationBinder().asFlow().take(1).toList()
-            assertTrue(actual[0] is Back)
+            val actual = flowModel.navigationBinder().asFlow().take(2).last()
+            assertTrue(actual is Back)
         }
 
         flowModel.back()
@@ -81,8 +110,8 @@ internal class BaseFlowModelTest {
         val flowModel = createTestFlowModel()
 
         launch {
-            val actual = flowModel.navigationBinder().asFlow().take(1).toList()
-            assertTrue(actual[0] is Quit)
+            val actual = flowModel.navigationBinder().asFlow().take(2).last()
+            assertTrue(actual is Quit)
         }
 
         flowModel.quitFlow()
@@ -92,13 +121,12 @@ internal class BaseFlowModelTest {
     fun `update navigation stream when result posted`() = dispatchBlockingTest {
         val flowModel = createTestFlowModel()
 
-        val expectedCommands = listOf<PostFlowResult<TestStep, IOData.EmptyOutput>>(
-            PostFlowResult(IOData.EmptyOutput), PostFlowResult(IOData.EmptyOutput)
-        )
+        val expectedFlowResultCommand = PostFlowResult<TestFlowStep, IOData.EmptyOutput>(IOData.EmptyOutput)
 
         launch {
-            val actual = flowModel.navigationBinder().asFlow().take(2).toList()
-            assertEquals(expectedCommands, actual)
+            val actual = flowModel.navigationBinder().asFlow().take(3).toList()
+            assertEquals(expectedFlowResultCommand, actual[1])
+            assertEquals(expectedFlowResultCommand, actual[2])
         }
 
         flowModel.postFlowResult(IOData.EmptyOutput)
@@ -108,31 +136,125 @@ internal class BaseFlowModelTest {
     @Test
     fun `should go to the next state`() {
         with(createTestFlowModel()) {
-            testNext(stateValue = 2)
+            simulateNext(stateValue = 2)
 
-            assertFlowModelState(2)
+            assertFlowState(2)
         }
     }
 
     @Test
-    fun `should navigate to previous step`() {
+    fun `should clear cache if addCurrentStepToBackStack set to false`() {
         with(createTestFlowModel()) {
-            testNext(stateValue = 2)
-            testBack()
+            activate()
+            simulateNext(stateValue = 2, addCurrentToBackStack = false)
 
-            assertFlowModelState(1)
+            verify(controllersCache).removeController(
+                controllerKey = ControllerKey("1"),
+                finish = false
+            )
+        }
+    }
+
+    @Test
+    fun `should dispatch push controller command when handles back stack`() = dispatchBlockingTest {
+        with(createTestFlowModel()) {
+            simulateNext(stateValue = 2)
+
+            val expectedCommand = PushControllerCommand<TestFlowStep, IOData.EmptyOutput>(
+                controller = TestController("1"),
+                fromSavedState = true,
+                animation = TransitionAnimation.NONE,
+                backward = true,
+                executeImmediately = true,
+            )
+            launch {
+                val actual = navigationBinder().asFlow().take(2).last()
+                assertEquals(expectedCommand, actual)
+            }
+
+            assertTrue(handleBackStack(immediate = true))
+            assertFlowState(1)
+        }
+    }
+
+    @Test
+    fun `should revert to latest state if forward transition was canceled`() = dispatchBlockingTest {
+        with(createTestFlowModel()) {
+            simulateNext(stateValue = 2)
+
+            val expectedCommand = PushControllerCommand<TestFlowStep, IOData.EmptyOutput>(
+                controller = TestController("1"),
+                fromSavedState = true,
+                animation = TransitionAnimation.NONE,
+                backward = true,
+                executeImmediately = true,
+            )
+            launch {
+                val actual = navigationBinder().asFlow().take(2).last()
+                assertEquals(expectedCommand, actual)
+            }
+
+            onTransitionCanceled(backward = false)
+
+            assertFlowState(1)
+        }
+    }
+
+    @Test
+    fun `should revert state dismiss if backward transition was canceled`() = dispatchBlockingTest {
+        with(createTestFlowModel()) {
+            simulateNext(stateValue = 2)
+            handleBackStack(immediate = true)
+
+            assertFlowState(stateValue = 1)
+
+            onTransitionCanceled(backward = true)
+
+            assertFlowState(stateValue = 2)
+
+            //check that back stack is still correct
+            handleBackStack(immediate = true)
+            assertFlowState(stateValue = 1)
+        }
+    }
+
+    @Test
+    fun `don't perform back navigation if back stack is empty`() = dispatchBlockingTest {
+        with(createTestFlowModel()) {
+            val actualCommands = mutableListOf<FlowNavigationCommand<TestStep, IOData.EmptyOutput>>()
+            val commandsCollection = launch {
+                navigationBinder().asFlow()
+                    .onEach { actualCommands.add(it) }
+                    .launchIn(this)
+            }
+            assertFalse(handleBackStack(immediate = true))
+
+            assertTrue(actualCommands.size == 1) //has only initial command
+            assertFalse((actualCommands.first() as PushControllerCommand).backward)
+
+            commandsCollection.cancel()
+        }
+    }
+
+    @Test
+    fun `should update state after navigation to the previous step`() {
+        with(createTestFlowModel()) {
+            simulateNext(stateValue = 2)
+            handleBackStack(immediate = true)
+
+            assertFlowState(1)
         }
     }
 
     @Test
     fun `should restore to the selected step`() {
         with(createTestFlowModel()) {
-            testNext(stateValue = 2)
-            testNext(stateValue = 3)
+            simulateNext(stateValue = 2)
+            simulateNext(stateValue = 3)
 
             restoreToStep(1)
 
-            assertFlowModelState(1)
+            assertFlowState(1)
         }
     }
 
@@ -141,14 +263,36 @@ internal class BaseFlowModelTest {
     fun `should decide if restoration needed based on restoration policy and postponed state`(
         restorationPolicy: RestorationPolicy,
         postponeStateRestore: Boolean,
-        restorationNeeded: Boolean
+        restorationState: RestorationState,
     ) {
-        val flowModel = TestFlowModel(postponeStateRestore = postponeStateRestore).apply {
+        val flowModel = TestFlowModel(postponeSavedStateRestore = postponeStateRestore).apply {
+            setInitialState()
             restoreState(restorationPolicy)
             onLifecycleEvent(LifecycleEvent.CREATED)
         }
 
-        assertEquals(restorationNeeded, flowModel.restorationNeeded)
+        assertEquals(restorationState, flowModel.currentRestorationState)
+    }
+
+    @Test
+    fun `GIVEN restoration required WHEN performCreate THEN push screen with required saved state restoration`() = dispatchBlockingTest {
+        val expectedCommand = PushControllerCommand<TestFlowStep, IOData.EmptyOutput>(
+            controller = TestController("1"),
+            fromSavedState = true,
+            animation = TransitionAnimation.NONE,
+            backward = false,
+            executeImmediately = true,
+        )
+
+        TestFlowModel(postponeSavedStateRestore = false).apply {
+            launch {
+                val actualCommand = navigationBinder().asFlow().first()
+                assertEquals(expectedCommand, actualCommand)
+            }
+            setInitialState()
+            restoreState(RestorationPolicy.FromBundle(Bundle()))
+            onLifecycleEvent(LifecycleEvent.CREATED)
+        }
     }
 
     @Test
@@ -156,18 +300,18 @@ internal class BaseFlowModelTest {
         val flowModel = TestFlowModel().apply {
             onLifecycleEvent(LifecycleEvent.CREATED)
         }
-        assertFalse(flowModel.restorationNeeded)
+        assertNull(flowModel.currentRestorationState)
     }
 
     @Test
     fun `start postponed state restoration if restore was previously postponed`() = dispatchBlockingTest {
-        val flowModel = TestFlowModel(postponeStateRestore = true).apply {
+        val flowModel = TestFlowModel(postponeSavedStateRestore = true).apply {
             restoreState(RestorationPolicy.FromBundle(Bundle()))
             onLifecycleEvent(LifecycleEvent.CREATED)
         }
 
         launch {
-            val actualCommand = flowModel.navigationBinder().asFlow().first()
+            val actualCommand = flowModel.navigationBinder().asFlow().take(2).last()
             assertTrue(actualCommand is StartPostponedStateRestore)
         }
 
@@ -176,7 +320,7 @@ internal class BaseFlowModelTest {
 
     @Test
     fun `don't start postponed state restoration twice`() = dispatchBlockingTest {
-        val flowModel = TestFlowModel(postponeStateRestore = true).apply {
+        val flowModel = TestFlowModel(postponeSavedStateRestore = true).apply {
             restoreState(RestorationPolicy.FromBundle(Bundle()))
             setInitialState()
         }
@@ -185,9 +329,20 @@ internal class BaseFlowModelTest {
         assertFalse(flowModel.startPostponedSavedStateRestore())
     }
 
-    private fun TestFlowModel.assertFlowModelState(stateValue: Int) {
-        assertEquals(TestStep(stateValue), step)
-        assertEquals(TestState(stateValue), curState)
+    @Test
+    fun `WHEN provide controller with a dependent controller THEN make a proper caching`() {
+        val controllerCache = DefaultControllersCache(100)
+        val flowModel = object : TestFlowModel() {
+            override fun getController(step: TestStep): Controller =
+                dependentController(ControllerKey("FLOW_KEY"), ControllerKey(step.value.toString())) {
+                    TestController(step.value.toString(), controllerCache)
+                }
+        }.apply {
+            injectDependencies(mock(), mock(), controllerCache)
+        }
+        val firstController = flowModel.getController(TestStep(1))
+        firstController.onCreate()
+        assertTrue(firstController === flowModel.getController(TestStep(1)))
     }
 
     private fun createTestFlowModel() = TestFlowModel().apply {
@@ -202,74 +357,21 @@ internal class BaseFlowModelTest {
             Arguments {
                 val restorationPolicy = RestorationPolicy.FromBundle(Bundle())
                 val postponeStateRestore = false
-                val restorationNeeded = true
 
-                arrayOf(restorationPolicy, postponeStateRestore, restorationNeeded)
+                arrayOf(restorationPolicy, postponeStateRestore, RestorationState.REQUIRED)
             },
             Arguments {
                 val restorationPolicy = RestorationPolicy.FromBundle(Bundle())
                 val postponeStateRestore = true
-                val restorationNeeded = false
 
-                arrayOf(restorationPolicy, postponeStateRestore, restorationNeeded)
+                arrayOf(restorationPolicy, postponeStateRestore, RestorationState.POSTPONED)
             },
             Arguments {
                 val restorationPolicy = RestorationPolicy.FromParent(mock())
                 val postponeStateRestore = true
-                val restorationNeeded = false
 
-                arrayOf(restorationPolicy, postponeStateRestore, restorationNeeded)
+                arrayOf(restorationPolicy, postponeStateRestore, RestorationState.POSTPONED)
             }
         )
     }
-
-    class TestFlowModel
-        (private val postponeStateRestore: Boolean = false
-    ) : BaseFlowModel<TestState, TestStep, IOData.EmptyOutput>() {
-
-        override val initialStep: TestStep = TestStep(1)
-        override val initialState: TestState = TestState(1)
-
-        private val childFlowModel: TestFlowModel by lazy(LazyThreadSafetyMode.NONE) {
-            TestFlowModel().apply { this.setInitialState() }
-        }
-
-        val curState: TestState get() = currentState
-
-        override fun getController(step: TestStep): Controller = mock()
-
-        fun testNext(stateValue: Int) {
-            val step = TestStep(stateValue)
-            val addCurrentToBackStack = true
-            next(step, addCurrentToBackStack)
-            setNextState(step, TransitionAnimation.NONE, addCurrentToBackStack, childFlowModel)
-            currentState = TestState(stateValue)
-        }
-
-        fun testBack() {
-            restorePreviousState()
-        }
-
-        fun restoreToStep(stateValue: Int) {
-            restoreToStep(
-                StepRestorationCriteria.RestoreByStep(
-                    condition = {
-                        (it as TestStep).value == stateValue
-                    },
-                    removeCurrent = true
-                )
-            )
-            testBack()
-        }
-
-        override fun postponeSavedStateRestore(): Boolean = postponeStateRestore
-
-    }
-
-    @Parcelize
-    data class TestState(val value: Int) : FlowState
-
-    @Parcelize
-    data class TestStep(val value: Int) : FlowStep
-
 }
