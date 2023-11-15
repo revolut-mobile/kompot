@@ -32,7 +32,6 @@ ext{
             [configuration: "testImplementation", dependency: "org.mockito:mockito-inline:$mockito_version"],
             [configuration: "testImplementation", dependency: "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockito_kotlin_version"],
             [configuration: "testImplementation", dependency: "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"],
-            [configuration: "testImplementation", dependency: project(':kompot_test_core')],
     ]
 
     as_general_dependencies_api = [

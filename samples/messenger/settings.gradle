@@ -18,5 +18,4 @@ include ':app',
         ':feature_chat_impl',
         ':feature_contacts_api',
         ':feature_contacts_impl',
-        ':playground',
-        ':kompot_test_core'
+        ':playground'
