@@ -13,6 +13,6 @@ data class ChatNavigationDestination(
     @Parcelize
     data class InputData(
         val contact: Contact
-    ): IOData.Input
+    ) : IOData.Input
 
 }
