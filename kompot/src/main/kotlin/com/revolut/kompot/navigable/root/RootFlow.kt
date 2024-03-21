@@ -21,6 +21,7 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.ModalDestination
+import com.revolut.kompot.dialog.DefaultLoadingDialogDisplayer
 import com.revolut.kompot.dialog.DialogDisplayer
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
@@ -33,7 +34,13 @@ import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.ControllerContainerFrameLayout
 
 abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: INPUT_DATA) : BaseFlow<STEP, INPUT_DATA, IOData.EmptyOutput>(inputData) {
-    abstract val rootDialogDisplayer: DialogDisplayer
+
+    open val rootDialogDisplayer by lazy(LazyThreadSafetyMode.NONE) {
+        DialogDisplayer(
+            loadingDialogDisplayer = DefaultLoadingDialogDisplayer(activity),
+            delegates = emptyList()
+        )
+    }
 
     abstract val containerForModalNavigation: ControllerContainerFrameLayout
 
