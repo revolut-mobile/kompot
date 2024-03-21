@@ -57,7 +57,7 @@ internal class BaseRootFlowModelTest {
 
         model.tryHandleEvent(testNavigationEvent)
 
-        verify(rootNavigator, never()).openModal(any(), any())
+        verify(rootNavigator, never()).openModal(any(), any(), any())
     }
 
     @Test
@@ -78,6 +78,6 @@ internal class BaseRootFlowModelTest {
         event._controller = mock()
         model.tryHandleEvent(event)
 
-        verify(rootNavigator).openModal(any(), any())
+        verify(rootNavigator).openModal(any(), any(), any())
     }
 }

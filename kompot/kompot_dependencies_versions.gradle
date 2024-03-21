@@ -10,9 +10,9 @@ ext {
 
     daggerVersion = '2.35.1'
 
-    recyclerKitRxDiffAdapterVersion = '1.0.8'
+    recyclerKitRxDiffAdapterVersion = '1.1.1'
     recyclerKitDecorationsVersion = '1.0.9'
-    recyclerKitDelegatesVersion = '1.0.11'
+    recyclerKitDelegatesVersion = '1.1.2'
 
     timberVersion = '5.0.1'
 

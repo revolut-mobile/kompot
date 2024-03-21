@@ -329,22 +329,6 @@ internal class BaseFlowModelTest {
         assertFalse(flowModel.startPostponedSavedStateRestore())
     }
 
-    @Test
-    fun `WHEN provide controller with a dependent controller THEN make a proper caching`() {
-        val controllerCache = DefaultControllersCache(100)
-        val flowModel = object : TestFlowModel() {
-            override fun getController(step: TestStep): Controller =
-                dependentController(ControllerKey("FLOW_KEY"), ControllerKey(step.value.toString())) {
-                    TestController(step.value.toString(), controllerCache)
-                }
-        }.apply {
-            injectDependencies(mock(), mock(), controllerCache)
-        }
-        val firstController = flowModel.getController(TestStep(1))
-        firstController.onCreate()
-        assertTrue(firstController === flowModel.getController(TestStep(1)))
-    }
-
     private fun createTestFlowModel() = TestFlowModel().apply {
         onLifecycleEvent(LifecycleEvent.CREATED)
     }

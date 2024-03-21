@@ -61,6 +61,12 @@ internal class CompositeModelBinding(
         }
     }
 
+    override fun onTransitionCanceled() {
+        bindings.forEach { binding ->
+            binding.onTransitionCanceled()
+        }
+    }
+
     override fun onHostPaused() {
         bindings.forEach { binding ->
             binding.onHostPaused()

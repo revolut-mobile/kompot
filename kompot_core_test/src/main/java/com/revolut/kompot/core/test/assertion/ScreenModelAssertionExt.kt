@@ -19,7 +19,6 @@ package com.revolut.kompot.core.test.assertion
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.clearInvocations
 import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import com.revolut.kompot.common.ErrorEvent
@@ -28,6 +27,7 @@ import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.common.NavigationEvent
 import com.revolut.kompot.dialog.DialogModel
 import com.revolut.kompot.dialog.DialogModelResult
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.flow.Flow
 import com.revolut.kompot.navigable.screen.BaseScreenModel
 import com.revolut.kompot.navigable.screen.Screen
@@ -90,12 +90,40 @@ fun BaseScreenModel<*, *, *>.assertModalViewController(assertion: (ViewControlle
     ControllerModelAssertions.assertModalViewController(eventsDispatcher, assertion)
 }
 
+fun <T : IOData.Output> BaseScreenModel<*, *, *>.assertModalViewController(outputToReturn: T, assertion: (ViewController<in T>) -> Boolean) {
+    ControllerModelAssertions.assertModalViewController(eventsDispatcher, outputToReturn, assertion)
+}
+
 fun ViewControllerModel<*>.assertModalViewController(assertion: (ViewController<*>) -> Boolean) {
     ControllerModelAssertions.assertModalViewController(eventsDispatcher, assertion)
 }
 
+fun ViewControllerModel<*>.assertModalController(assertion: (Controller) -> Boolean) {
+    ControllerModelAssertions.assertModalController(eventsDispatcher, assertion)
+}
+
+fun <T : IOData.Output> ViewControllerModel<*>.assertModalViewController(outputToReturn: T, assertion: (ViewController<*>) -> Boolean) {
+    ControllerModelAssertions.assertModalViewController(eventsDispatcher, outputToReturn, assertion)
+}
+
 fun ViewControllerModel<*>.assertModalScreen(assertion: (Screen<*>) -> Boolean) {
     ControllerModelAssertions.assertModalScreen(eventsDispatcher, assertion)
+}
+
+fun <T : IOData.Output> ViewControllerModel<*>.assertModalScreen(outputToReturn: T, assertion: (Screen<*>) -> Boolean) {
+    ControllerModelAssertions.assertModalScreen(eventsDispatcher, outputToReturn, assertion)
+}
+
+fun ViewControllerModel<*>.assertModalFlow(assertion: (Flow<*>) -> Boolean) {
+    ControllerModelAssertions.assertModalFlow(eventsDispatcher, assertion)
+}
+
+fun <T : IOData.Output> ViewControllerModel<*>.assertModalFlow(outputToReturn: T, assertion: (Flow<in T>) -> Boolean) {
+    ControllerModelAssertions.assertModalFlow(eventsDispatcher, outputToReturn, assertion)
+}
+
+fun ViewControllerModel<*>.assertDestination(destination: NavigationDestination) {
+    ControllerModelAssertions.assertDestination(destination, eventsDispatcher)
 }
 
 fun BaseScreenModel<*, *, *>.mockDialogResult(forModel: DialogModel<*>, resultToReturn: DialogModelResult) {
@@ -104,16 +132,7 @@ fun BaseScreenModel<*, *, *>.mockDialogResult(forModel: DialogModel<*>, resultTo
 }
 
 fun BaseScreenModel<*, *, *>.assertDialog(model: DialogModel<*>) {
-    argumentCaptor<DialogModel<DialogModelResult>>().apply {
-        verify(dialogDisplayer).showDialog(capture())
-        clearInvocations(dialogDisplayer)
-        val dialogModel = firstValue
-        Assertions.assertEquals(
-            model,
-            dialogModel,
-            "\nAssertion failed for dialog!"
-        )
-    }
+    ControllerModelAssertions.assertDialog(dialogDisplayer, model)
 }
 
 inline fun <reified MODEL : DialogModel<RESULT>, RESULT : DialogModelResult> BaseScreenModel<*, *, *>.assertDialog(assertion: (actual: MODEL) -> Boolean) {
@@ -143,16 +162,5 @@ inline fun <reified MODEL : DialogModel<*>> BaseScreenModel<*, *, *>.assertDialo
 /** Useful for cases where we show 2+ dialogs one after another. `BaseScreenModel.assertDialog()` implementation
  *  doesn't support sequential invocation, in contrast to `FlowModelAssertion.assertDialog()` */
 fun BaseScreenModel<*, *, *>.assertDialogs(vararg models: DialogModel<*>) {
-    argumentCaptor<DialogModel<DialogModelResult>>().apply {
-        verify(dialogDisplayer, times(models.size)).showDialog(capture())
-        clearInvocations(dialogDisplayer)
-        models.forEachIndexed { index, model ->
-            val dialogModel = allValues[index]
-            Assertions.assertEquals(
-                model,
-                dialogModel,
-                "\nAssertion failed for dialog!"
-            )
-        }
-    }
+    ControllerModelAssertions.assertDialogs(dialogDisplayer, *models)
 }

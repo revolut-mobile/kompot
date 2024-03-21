@@ -38,11 +38,16 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
     private var activeTransition: ActiveTransition? = null
     override val controllersTransitionActive: Boolean get() = activeTransition != null
 
+    private var _latestDispatchedInsets: WindowInsets? = null
+    override val latestDispatchedInsets: WindowInsets?
+        get() = _latestDispatchedInsets
+
+    private var savedStateDispatchAllowed: Boolean = false
+
     init {
         val ta = context.obtainStyledAttributes(attrs, R.styleable.ControllerContainer)
         fitStatusBar = ta.getBoolean(R.styleable.ControllerContainer_fitStatusBar, fitStatusBar)
-        fitNavigationBar =
-            ta.getBoolean(R.styleable.ControllerContainer_fitNavigationBar, fitNavigationBar)
+        fitNavigationBar = ta.getBoolean(R.styleable.ControllerContainer_fitNavigationBar, fitNavigationBar)
         ta.recycle()
     }
 
@@ -50,10 +55,7 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
         ViewCompat.requestApplyInsets(containerView)
     }
 
-    override fun handleDispatchApplyWindowInsets(
-        controllerContainer: ControllerContainer,
-        insets: WindowInsets
-    ): WindowInsets {
+    override fun handleDispatchApplyWindowInsets(controllerContainer: ControllerContainer, insets: WindowInsets): WindowInsets {
         val interceptedInsets = insetsInterceptor?.invoke(controllerContainer.asViewGroup(), insets)
         if (interceptedInsets != null && interceptedInsets.isConsumed) {
             return interceptedInsets
@@ -62,6 +64,7 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
         if (handledInsets.isConsumed) {
             return handledInsets
         }
+        _latestDispatchedInsets = handledInsets
         return dispatchInsetsToChildren(controllerContainer.asViewGroup(), handledInsets)
     }
 
@@ -70,10 +73,7 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
      * This method applies a correct behaviour so it is available in all the versions
      * https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/view/ViewGroup.java;l=7341-7371;drc=6411c81462e3594c38a1be5d7c27d67294139ab8
      */
-    private fun dispatchInsetsToChildren(
-        containerView: ViewGroup,
-        insets: WindowInsets
-    ): WindowInsets {
+    private fun dispatchInsetsToChildren(containerView: ViewGroup, insets: WindowInsets): WindowInsets {
         containerView.children.forEach { child ->
             child.dispatchApplyWindowInsets(insets)
         }
@@ -82,8 +82,7 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
 
     private fun ControllerContainer.handleInsets(insets: WindowInsets): WindowInsets? {
         val compatInsets = WindowInsetsCompat.toWindowInsetsCompat(insets)
-        val handledInsetsType =
-            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
+        val handledInsetsType = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
         val insetDimensions = compatInsets.getInsets(handledInsetsType)
 
         val containerView = asViewGroup()
@@ -112,6 +111,37 @@ class ControllerContainerDelegate(context: Context, attrs: AttributeSet?) : Cont
         val activeTransition = activeTransition
         return activeTransition != null && !activeTransition.indefinite
     }
+
+    /**
+     * Kompot has its own solution for storing views state. It creates a separate bundle for every controller
+     * and keeps views state in this bundle. To avoid duplicated data in the saved state, we'll need to ensure that:
+     *  - Controller keeps the state of its own views only (e.g flows don't keep view states of their children)
+     *  - Activity doesn't persist state of the controller views
+     *
+     *  In order to achieve that, we control whether container saved state is allowed using [savedStateDispatchAllowed] flag. Controller containers handle
+     *  this flag to understand if the save state instruction came from the owning controller and not from the
+     *  android framework. Controller containers handle saved state only when the [savedStateDispatchAllowed] flag is enabled.
+     */
+    override fun allowSavedStateDispatch() {
+        savedStateDispatchAllowed = true
+    }
+
+    /**
+     * Use [savedStateDispatchAllowed] flag to determine if saved state is allowed. Controllers use this flag
+     * to check if it's allowed to call methods like [View.dispatchSaveInstanceState].
+     * If the flag is enabled, we'll clear it right away to ensure the flag is clean for the next saved state invocations.
+     * [View.dispatchSaveInstanceState] and [View.dispatchRestoreInstanceState] traverse all underlying views hierarchy, so using the flag helps us to stop traversal
+     * when we reach the next controller container. More info in the [ControllerContainer.allowSavedStateDispatch],
+     *
+     * @return true if saved state dispatch is allowed and we can proceed with the saved state. false otherwise.
+     */
+    override fun useSavedStateDispatchAllowance(): Boolean =
+        if (savedStateDispatchAllowed) {
+            savedStateDispatchAllowed = false
+            true
+        } else {
+            false
+        }
 
     override fun onControllersTransitionStart(indefinite: Boolean) {
         activeTransition = ActiveTransition(indefinite)

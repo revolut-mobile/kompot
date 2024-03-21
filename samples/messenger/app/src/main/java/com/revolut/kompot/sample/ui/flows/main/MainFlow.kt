@@ -2,7 +2,6 @@ package com.revolut.kompot.sample.ui.flows.main
 
 import android.view.View
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.utils.viewBinding
 import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.navigable.vc.composite.ui_states_flow.ModelBinding
@@ -17,8 +16,6 @@ class MainFlow : ViewController<IOData.EmptyOutput>(), UIStatesFlowController<UI
 
     override val layoutId = R.layout.flow_main
     private val binding by viewBinding(FlowMainBinding::bind)
-    override var cacheStrategy: ControllerCacheStrategy = ControllerCacheStrategy.Prioritized
-    override var keyInitialization = { MainFlowContract.mainFlowKey }
 
     override val component: MainFlowComponent by lazy(LazyThreadSafetyMode.NONE) {
         activity.sampleApplication

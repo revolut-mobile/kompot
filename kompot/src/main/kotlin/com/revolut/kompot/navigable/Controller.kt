@@ -39,6 +39,7 @@ import com.revolut.kompot.navigable.binder.CompositeBinding
 import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.cache.ControllersCache
 import com.revolut.kompot.navigable.flow.BaseFlow
+import com.revolut.kompot.navigable.hooks.ControllerViewContextHook
 import com.revolut.kompot.navigable.hooks.HooksProvider
 import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.transition.TransitionCallbacks
@@ -60,6 +61,12 @@ abstract class Controller :
     PermissionsRequester,
     LayoutOwner {
 
+    @StyleRes
+    open val themeId: Int? = null
+    open val fitStatusBar: Boolean? = null
+    open val fitNavigationBar: Boolean? = null
+    open var keyInitialization: () -> ControllerKey = { ControllerKey.random() }
+
     val activity: Activity by lazy(LazyThreadSafetyMode.NONE) {
         var context: Context = view.context
         while (context is ContextWrapper) {
@@ -71,18 +78,17 @@ abstract class Controller :
 
         (context as? Activity) ?: throw IllegalStateException("Activity is not present")
     }
-
     val key: ControllerKey by lazy(LazyThreadSafetyMode.NONE) {
         keyInitialization()
     }
-    open var keyInitialization: () -> ControllerKey = { ControllerKey.random() }
+    val environment: ControllerEnvironment by lazy {
+        ControllerEnvironment(this)
+    }
+    val resources: Resources get() = activity.resources
 
     internal val createdScope: CoroutineScope = ControllerScope()
     internal val attachedScope: CoroutineScope = ControllerScope()
     internal val tillDestroyBinding = CompositeBinding()
-
-    val resources: Resources
-        get() = activity.resources
 
     internal lateinit var parentControllerManager: ControllerManager
     internal val controllersCache: ControllersCache
@@ -97,17 +103,10 @@ abstract class Controller :
         PermissionsFromControllerRequester(this)
     }
 
-    @StyleRes
-    open val themeId: Int? = null
-    open val fitStatusBar: Boolean? = null
-    open val fitNavigationBar: Boolean? = null
-
     protected val parentFlow: ParentFlow
         get() = parentController as ParentFlow
 
     internal var parentController: Controller? = null
-    val environment: ControllerEnvironment
-        get() = calculateEnvironment()
     lateinit var view: View
 
     private var _attached = false
@@ -161,9 +160,19 @@ abstract class Controller :
             this.view = it
         }
 
-    internal fun patchLayoutInflaterWithTheme(inflater: LayoutInflater) = themeId?.let { themeResId ->
-        LayoutInflater.from(ContextThemeWrapper(inflater.context, themeResId))
-    } ?: inflater
+    internal fun getViewInflater(baseInflater: LayoutInflater): LayoutInflater {
+        val themeId = themeId
+        val controllerViewCtxHook = hooksProvider?.getHook(ControllerViewContextHook)
+        if (controllerViewCtxHook == null && themeId == null) return baseInflater
+        var inflaterContext = baseInflater.context
+        if (controllerViewCtxHook != null) {
+            inflaterContext = controllerViewCtxHook.hook(environment, inflaterContext)
+        }
+        if (themeId != null) {
+            inflaterContext = ContextThemeWrapper(inflaterContext, themeId)
+        }
+        return LayoutInflater.from(inflaterContext)
+    }
 
     internal fun getOrCreateView(inflater: LayoutInflater): View {
         return if (created) {
@@ -188,7 +197,16 @@ abstract class Controller :
 
     internal fun bind(
         controllerManager: ControllerManager,
-        parentController: Controller?
+        parentController: Controller?,
+        enterTransition: TransitionAnimation,
+    ) {
+        bind(controllerManager, parentController)
+        this.environment.enterTransition = enterTransition
+    }
+
+    internal fun bind(
+        controllerManager: ControllerManager,
+        parentController: Controller?,
     ) {
         parentControllerManager = controllerManager
         this.parentController = parentController
@@ -210,6 +228,7 @@ abstract class Controller :
     }
 
     open fun onDestroy() {
+        if (destroyed) return
         _destroyed = true
         onDestroyCallbacks.forEach { func -> func() }
         onDestroyCallbacks.clear()
@@ -381,28 +400,6 @@ abstract class Controller :
 
     internal open fun handleQuit() {
         parentController?.handleQuit()
-    }
-
-    private fun calculateEnvironment(): ControllerEnvironment {
-        var modalRoot = false
-
-        var controller = this
-        var parent = parentController
-
-        while (parent != null) {
-            if (controller.parentControllerManager.modal) {
-                modalRoot = true
-                break
-            }
-            val parentFlow = parent as? ParentFlow
-            if (parentFlow == null || parentFlow.hasBackStack) {
-                break
-            }
-            controller = parent
-            parent = parent.parentController
-        }
-
-        return ControllerEnvironment(modalRoot = modalRoot)
     }
 
     enum class ActiveTransition {

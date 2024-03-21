@@ -26,6 +26,8 @@ interface ModalAnimatable {
 
     fun show(onTransitionEnd: () -> Unit)
 
+    fun showImmediately()
+
     fun hide(onTransitionEnd: () -> Unit)
 
     fun addContent(view: View)
@@ -35,6 +37,9 @@ interface ModalAnimatable {
     fun setOnDismissListener(onDismiss: (() -> Unit)?)
 
     enum class Style {
-        FADE, SLIDE, BOTTOM_DIALOG_SHEET,
+        FULLSCREEN_FADE,
+        FULLSCREEN_SLIDE_FROM_BOTTOM,
+        POPUP,
+        BOTTOM_DIALOG_SHEET
     }
 }

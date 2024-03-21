@@ -47,6 +47,8 @@ interface FlowAssertion<T> {
 
     fun assertComplete(): FlowAssertion<T>
 
+    fun assertNotCompleted(): FlowAssertion<T>
+
     fun assertError(
         throwable: Throwable
     ): FlowAssertion<T>

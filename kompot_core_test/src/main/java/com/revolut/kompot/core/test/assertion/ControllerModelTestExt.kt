@@ -26,6 +26,8 @@ import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.coroutines.test.TestContextProvider
 import com.revolut.kompot.dialog.DialogDisplayer
+import com.revolut.kompot.dialog.DialogModel
+import com.revolut.kompot.dialog.DialogModelResult
 import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.ControllerModelExtension
 import com.revolut.kompot.navigable.binder.asFlow
@@ -36,6 +38,7 @@ import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.navigable.vc.ViewControllerModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun <T : ControllerModel> T.applyTestDependencies(
@@ -75,3 +78,11 @@ fun <T : IOData.Output> ControllerModel.bindDescriptor(descriptor: ControllerDes
 
 fun <T : IOData.Output> ControllerModelExtension.bindDescriptor(descriptor: ControllerDescriptor<T>, controller: ViewController<T>) =
     parentEventsDispatcher.bindDescriptor(descriptor, controller)
+
+fun ControllerModel.assertDialog(model: DialogModel<*>) =
+    ControllerModelAssertions.assertDialog(dialogDisplayer, model)
+
+fun ControllerModel.mockDialogResult(forModel: DialogModel<*>, resultToReturn: DialogModelResult) {
+    whenever(dialogDisplayer.showDialog(forModel))
+        .doReturn(flowOf(resultToReturn))
+}

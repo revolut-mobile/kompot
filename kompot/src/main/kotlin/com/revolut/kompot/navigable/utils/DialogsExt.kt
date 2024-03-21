@@ -22,7 +22,7 @@ import com.revolut.kompot.dialog.DialogModelResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
-internal fun setBlockingLoadingVisibility(dialogDisplayer: DialogDisplayer, visible: Boolean, immediate: Boolean = false) {
+fun setBlockingLoadingVisibility(dialogDisplayer: DialogDisplayer, visible: Boolean, immediate: Boolean = false) {
     if (visible) {
         dialogDisplayer.showLoadingDialog(if (immediate) 0 else 1000)
     } else {

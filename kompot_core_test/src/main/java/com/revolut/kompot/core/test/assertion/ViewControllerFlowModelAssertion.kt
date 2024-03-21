@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.Controller
+import com.revolut.kompot.navigable.ControllerKey
 import com.revolut.kompot.navigable.binder.asFlow
 import com.revolut.kompot.navigable.flow.Back
 import com.revolut.kompot.navigable.flow.FlowStep
@@ -41,18 +42,17 @@ internal class ViewControllerFlowModelAssertion<T, STEP : FlowStep, OUTPUT : IOD
     override val eventsDispatcher: EventsDispatcher
         get() = model.eventsDispatcher
 
+    override val hasBackStack: Boolean
+        get() = model.flowCoordinator.hasBackStack
+
     init {
         model.applyTestDependencies(dialogDisplayer = dialogDisplayer)
-        model.flowCoordinator.performCreate()
+        model.flowCoordinator.onCreate(ControllerKey(""))
         model.flowCoordinator
             .navigationBinder().asFlow()
             .onEach { command ->
                 when (command) {
                     is Next -> model.flowCoordinator.setNextState(command, null)
-                    is Back -> {
-                        model.flowCoordinator.handleBackStack(immediate = true)
-                        commandQueue.add(command)
-                    }
                     is Quit,
                     is StartPostponedStateRestore -> {
                         commandQueue.add(command)
@@ -65,6 +65,12 @@ internal class ViewControllerFlowModelAssertion<T, STEP : FlowStep, OUTPUT : IOD
         model.resultStream()
             .onEach {
                 commandQueue.add(PostFlowResult(it))
+            }.launchIn(testScope)
+
+        model.backStream()
+            .onEach {
+                model.flowCoordinator.handleBackStack(immediate = true)
+                commandQueue.add(Back())
             }.launchIn(testScope)
     }
 

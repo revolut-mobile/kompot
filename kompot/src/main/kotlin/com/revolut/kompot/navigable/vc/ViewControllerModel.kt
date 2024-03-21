@@ -17,6 +17,7 @@
 package com.revolut.kompot.navigable.vc
 
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.common.ModalDestination
 import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.binder.ModelBinder
@@ -29,6 +30,9 @@ import com.revolut.kompot.navigable.vc.scroller.ScrollerCoordinator
 import com.revolut.kompot.navigable.vc.scroller.ScrollerItem
 
 abstract class ViewControllerModel<OUTPUT : IOData.Output> : ControllerModel(), ViewControllerModelApi<OUTPUT> {
+
+    internal var _restored = false
+    protected val restored: Boolean get() = _restored
 
     private val resultCommandsBinder = ModelBinder<OUTPUT>()
     private val backCommandsBinder = ModelBinder<Unit>()
@@ -79,6 +83,13 @@ abstract class ViewControllerModel<OUTPUT : IOData.Output> : ControllerModel(), 
     protected fun FlowCoordinator<*, *>.quit() = quit()
     protected fun ScrollerCoordinator<*>.quit() = quit()
     protected fun FlowCoordinator<*, *>.clearBackStack() = clearBackStack()
-    protected fun <Step : FlowStep> FlowCoordinator<Step, *>.openModal(step: Step) = openModal(step)
-    protected fun <Step : FlowStep> ModalCoordinator<Step, *>.openModal(step: Step) = openModal(step)
+    protected fun <Step : FlowStep> FlowCoordinator<Step, *>.openModal(
+        step: Step,
+        style: ModalDestination.Style = ModalDestination.Style.POPUP,
+    ) = openModal(step, style)
+
+    protected fun <Step : FlowStep> ModalCoordinator<Step, *>.openModal(
+        step: Step,
+        style: ModalDestination.Style = ModalDestination.Style.POPUP,
+    ) = openModal(step, style)
 }

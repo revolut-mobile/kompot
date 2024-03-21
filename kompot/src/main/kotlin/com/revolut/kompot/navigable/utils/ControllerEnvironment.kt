@@ -16,4 +16,44 @@
 
 package com.revolut.kompot.navigable.utils
 
-data class ControllerEnvironment(val modalRoot: Boolean)
+import com.revolut.kompot.R
+import com.revolut.kompot.common.ModalDestination
+import com.revolut.kompot.di.flow.ParentFlow
+import com.revolut.kompot.navigable.Controller
+import com.revolut.kompot.navigable.TransitionAnimation
+import com.revolut.kompot.navigable.extractModalStyle
+
+class ControllerEnvironment(private val controller: Controller) {
+
+    internal var enterTransition: TransitionAnimation? = null
+    /**
+     * @return modal style if controller was started as modal. Null otherwise
+     */
+    val modalStyle: ModalDestination.Style? get() = enterTransition?.extractModalStyle()
+
+    val defaultControllerContainer: Int
+        get() =
+            controller.parentControllerManager.defaultControllerContainer ?: R.layout.base_flow_container
+
+    fun isModalRoot(): Boolean {
+        var result = false
+
+        var currentController = controller
+        var parent = currentController.parentController
+
+        while (parent != null) {
+            if (currentController.parentControllerManager.modal) {
+                result = true
+                break
+            }
+            val parentFlow = parent as? ParentFlow
+            if (parentFlow == null || parentFlow.hasBackStack) {
+                break
+            }
+            currentController = parent
+            parent = parent.parentController
+        }
+
+        return result
+    }
+}

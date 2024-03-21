@@ -1,9 +1,8 @@
 package com.revolut.kompot.sample.ui.flows.main
 
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.ControllerKey
 import com.revolut.kompot.navigable.flow.FlowState
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.flow.ReusableFlowStep
 import com.revolut.kompot.navigable.vc.composite.ui_states_flow.UIStatesFlowModel
 import com.revolut.kompot.navigable.vc.ui.States
 import com.revolut.kompot.sample.ui.views.BottomBar
@@ -27,16 +26,15 @@ interface MainFlowContract {
         val selectedTabId: String
     ) : FlowState
 
-    sealed class Step : FlowStep {
+    sealed class Step : ReusableFlowStep {
         @Parcelize
-        object ChatList : Step()
+        object ChatList : Step() {
+            override val key: String get() = "chatList"
+        }
 
         @Parcelize
-        object ContactList : Step()
+        object ContactList : Step() {
+            override val key: String get() = "contactList"
+        }
     }
-
-    companion object {
-        val mainFlowKey = ControllerKey("MainFlow")
-    }
-
 }

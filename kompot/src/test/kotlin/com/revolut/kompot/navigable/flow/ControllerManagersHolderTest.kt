@@ -92,7 +92,7 @@ internal class ControllerManagersHolderTest {
         containerId: String = "containerId",
     ) = ControllerManager(
         modal = modal,
-        defaultFlowLayout = null,
+        defaultControllerContainer = null,
         controllersCache = DefaultControllersCache(0),
         controllerViewHolder = TestControllerViewHolder(containerId),
         onTransitionCanceled = {},

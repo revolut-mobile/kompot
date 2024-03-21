@@ -18,7 +18,9 @@ package com.revolut.kompot.view
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.WindowInsets
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -40,4 +42,26 @@ open class ControllerContainerCoordinatorLayout @JvmOverloads constructor(
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean =
         handleDispatchTouchEvent(ev) || super.dispatchTouchEvent(ev)
+
+    override fun saveState(outState: SparseArray<Parcelable>) {
+        allowSavedStateDispatch()
+        dispatchSaveInstanceState(outState)
+    }
+
+    override fun restoreState(state: SparseArray<Parcelable>) {
+        allowSavedStateDispatch()
+        dispatchRestoreInstanceState(state)
+    }
+
+    override fun dispatchSaveInstanceState(container: SparseArray<Parcelable>) {
+        if (useSavedStateDispatchAllowance()) {
+            super.dispatchSaveInstanceState(container)
+        }
+    }
+
+    override fun dispatchRestoreInstanceState(container: SparseArray<Parcelable>) {
+        if (useSavedStateDispatchAllowance()) {
+            super.dispatchRestoreInstanceState(container)
+        }
+    }
 }

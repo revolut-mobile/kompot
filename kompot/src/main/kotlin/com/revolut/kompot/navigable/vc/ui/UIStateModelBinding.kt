@@ -18,6 +18,7 @@ package com.revolut.kompot.navigable.vc.ui
 
 import android.os.Bundle
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.common.LifecycleEvent
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.navigable.vc.binding.ModelBinding
@@ -60,11 +61,21 @@ internal class UIStateModelBindingImpl<M : UIStatesModel<D, UI, Out>, D : States
     var doBeforeRender: ((UI) -> Unit)? = null
 
     override fun onCreate() {
+        model.state.onLifecycleEvent(LifecycleEvent.CREATED)
         startCollectingUIState()
     }
 
     override fun onShow() {
+        model.state.onLifecycleEvent(LifecycleEvent.SHOWN)
         bindUIState()
+    }
+
+    override fun onHide() {
+        model.state.onLifecycleEvent(LifecycleEvent.HIDDEN)
+    }
+
+    override fun onDestroy() {
+        model.state.onLifecycleEvent(LifecycleEvent.FINISHED)
     }
 
     private fun startCollectingUIState() {

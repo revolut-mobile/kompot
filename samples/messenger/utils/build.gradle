@@ -12,5 +12,5 @@ addDependencies(
 )
 
 android {
-        namespace "com.revolut.kompot.sample.utils"
+    namespace "com.revolut.kompot.sample.utils"
 }

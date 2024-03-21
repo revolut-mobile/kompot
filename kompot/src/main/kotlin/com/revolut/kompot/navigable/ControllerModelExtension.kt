@@ -170,23 +170,23 @@ abstract class ControllerModelExtension {
     suspend fun NavigationRequest.navigate() = navigate(parentEventsDispatcher)
 
     protected fun <T : IOData.Output> Screen<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(parentEventsDispatcher, style, onResult)
 
     protected fun <T : IOData.Output> Flow<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(parentEventsDispatcher, style, onResult)
 
     @OptIn(ExperimentalKompotApi::class)
     protected fun <T : IOData.Output> ScrollerFlow<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(parentEventsDispatcher, style, onResult)
 
     protected fun <T : IOData.Output> ViewController<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(parentEventsDispatcher, style, onResult)
 

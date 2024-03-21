@@ -125,7 +125,7 @@ internal class CustomContextText {
     private fun withReplacedDispatchers(block: () -> Unit) {
         AppDispatchers.dispatcherOverride = { testDispatcher }
         block()
-        AppDispatchers.dispatcherOverride = { it() }
+        AppDispatchers.dispatcherOverride = { null }
     }
 
     companion object {

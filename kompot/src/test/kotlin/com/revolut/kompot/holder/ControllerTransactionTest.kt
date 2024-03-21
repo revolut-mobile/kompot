@@ -24,8 +24,8 @@ import com.nhaarman.mockitokotlin2.verify
 import com.revolut.kompot.navigable.ChildControllerListener
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
-import com.revolut.kompot.navigable.components.TestController
 import com.revolut.kompot.navigable.cache.DefaultControllersCache
+import com.revolut.kompot.navigable.components.TestController
 import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.ControllerContainerFrameLayout
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -39,7 +39,7 @@ internal class ControllerTransactionTest {
 
     private val controllerManager = ControllerManager(
         modal = false,
-        defaultFlowLayout = null,
+        defaultControllerContainer = null,
         controllersCache = DefaultControllersCache(1),
         controllerViewHolder = mock {
             on { container } doReturn mock<ControllerContainerFrameLayout>()

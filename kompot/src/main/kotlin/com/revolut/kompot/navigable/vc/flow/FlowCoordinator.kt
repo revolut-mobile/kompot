@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.os.Parcelable
 import androidx.annotation.VisibleForTesting
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.common.ModalDestination
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerKey
 import com.revolut.kompot.navigable.ControllerModel
@@ -33,17 +34,26 @@ import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.Next
 import com.revolut.kompot.navigable.flow.PushControllerCommand
 import com.revolut.kompot.navigable.flow.Quit
+import com.revolut.kompot.navigable.flow.RestorationState
+import com.revolut.kompot.navigable.flow.ReusableFlowStep
+import com.revolut.kompot.navigable.flow.getControllerKey
 import com.revolut.kompot.navigable.vc.modal.ModalCoordinator
 import kotlinx.parcelize.Parcelize
 
 open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
     private val hostModel: ControllerModel,
     private val initialStep: STEP,
+    private val initialBackStack: List<BackStackEntry<STEP>>,
     private val controllersFactory: FlowCoordinator<STEP, OUTPUT>.(STEP) -> Controller,
 ) {
 
     val step: STEP get() = taskState.step
     val hasBackStack: Boolean get() = _backStack.isNotEmpty()
+    val restorationState: RestorationState?
+        get() = when {
+            savedState != null -> RestorationState.REQUIRED
+            else -> null
+        }
 
     private val modalCoordinator = ModalCoordinator<STEP, OUTPUT>(
         hostModel = hostModel,
@@ -57,12 +67,14 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
     private val navigationCommandsBinder =
         StatefulModelBinder<FlowNavigationCommand<STEP, OUTPUT>>()
 
-    private var pendingSavedState: Bundle? = null
+    private var savedState: Bundle? = null
     private var latestStateBackup: Backup? = null
+    private lateinit var parentControllerKey: ControllerKey
 
-    @VisibleForTesting
-    fun performCreate() {
-        setFlowModelState(pendingSavedState)
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    fun onCreate(parentKey: ControllerKey) {
+        this.parentControllerKey = parentKey
+        setFlowModelState(savedState)
         navigationCommandsBinder.notify(
             PushControllerCommand(
                 controller = getOrCreateCurrentStateController(),
@@ -72,6 +84,7 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
                 executeImmediately = true,
             )
         )
+        modalCoordinator.performCreate()
     }
 
     private fun setFlowModelState(pendingSavedState: Bundle?) {
@@ -85,8 +98,21 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
     private fun setInitialState() {
         taskState = FlowTaskState(
             step = initialStep,
-            animation = TransitionAnimation.NONE
+            animation = if (initialBackStack.isEmpty()) {
+                TransitionAnimation.NONE
+            } else {
+                initialBackStack.last().animation
+            }
         )
+        _backStack.clear()
+        initialBackStack.forEach { (step, transition) ->
+            _backStack.add(
+                FlowTaskState(
+                    step = step,
+                    animation = transition
+                )
+            )
+        }
     }
 
     private fun restoreFlowModelState(bundle: Bundle) {
@@ -192,10 +218,8 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
     }
 
     private fun getOrCreateCurrentStateController(): Controller {
-        val cachedController = taskState.currentControllerKey?.let { key ->
-            hostModel.controllersCache.getController(key)
-        }
-        val controller = cachedController ?: controllersFactory(taskState.step)
+        val cachedController = getCachedController(parentControllerKey)
+        val controller = cachedController ?: createController(taskState.step, parentControllerKey)
         if (cachedController == null && controller is SavedStateOwner) {
             controller.doOnCreate { taskState.childState?.run(controller::restoreState) }
         }
@@ -205,33 +229,23 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
         return controller
     }
 
-    @VisibleForTesting
-    fun getCurrentController(): Controller = controllersFactory(taskState.step)
+    private fun getCachedController(parentKey: ControllerKey): Controller? {
+        val cacheKey = taskState.currentControllerKey ?: taskState.step.getReusableControllerKey(parentKey)
+        return cacheKey?.let { hostModel.controllersCache.getController(cacheKey) }
+    }
 
-    fun dependentController(
-        flowKey: ControllerKey,
-        step: FlowStep,
-        controllerProvider: () -> Controller
-    ): Controller =
-        dependentController(
-            flowKey = flowKey,
-            controllerKey = ControllerKey(
-                step.javaClass.canonicalName ?: step.javaClass.simpleName
-            ),
-            controllerProvider = controllerProvider,
-        )
+    private fun FlowStep.getReusableControllerKey(parentKey: ControllerKey): ControllerKey? =
+        (this as? ReusableFlowStep)?.getControllerKey(parentKey)
 
-    fun dependentController(
-        flowKey: ControllerKey,
-        controllerKey: ControllerKey,
-        controllerProvider: () -> Controller
-    ): Controller {
-        val cachedController = hostModel.controllersCache.getController(controllerKey)
-        return cachedController ?: controllerProvider().apply {
-            cacheStrategy = ControllerCacheStrategy.DependentOn(flowKey)
-            keyInitialization = { controllerKey }
+    private fun createController(step: STEP, parentKey: ControllerKey) = controllersFactory(taskState.step).also { controller ->
+        if (step is ReusableFlowStep) {
+            controller.cacheStrategy = ControllerCacheStrategy.DependentOn(parentKey)
+            controller.keyInitialization = { step.getControllerKey(parentKey) }
         }
     }
+
+    @VisibleForTesting
+    fun getCurrentController(): Controller = controllersFactory(taskState.step)
 
     internal fun quit() {
         clearBackStack()
@@ -252,17 +266,23 @@ open class FlowCoordinator<STEP : FlowStep, OUTPUT : IOData.Output>(
         taskState = taskState.copy(childState = childBundle)
         outBundle.putParcelable(TASK_STATE_ARG, taskState)
         outBundle.putParcelableArrayList(BACK_STACK_ARG, ArrayList(_backStack))
+        modalCoordinator.saveState(outBundle)
     }
 
     fun restoreState(bundle: Bundle) {
-        pendingSavedState = bundle
+        savedState = bundle
+        modalCoordinator.restoreState(bundle)
     }
 
-    internal fun openModal(step: STEP) = modalCoordinator.openModal(step)
+    internal fun onDestroy() {
+        clearBackStack()
+    }
 
-    private companion object {
-        const val TASK_STATE_ARG = "TASK_STATE_ARG"
-        const val BACK_STACK_ARG = "BACK_STACK_ARG"
+    internal fun openModal(step: STEP, style: ModalDestination.Style) = modalCoordinator.openModal(step, style)
+
+    companion object {
+        private const val TASK_STATE_ARG = "TASK_STATE_ARG"
+        private const val BACK_STACK_ARG = "BACK_STACK_ARG"
     }
 
     private inner class Backup(
@@ -279,14 +299,21 @@ internal data class FlowTaskState<S : FlowStep>(
     val currentControllerKey: ControllerKey? = null
 ) : Parcelable
 
-@Suppress("FunctionName")
+@Parcelize
+data class BackStackEntry<S : FlowStep>(
+    val step: S,
+    val animation: TransitionAnimation,
+) : Parcelable
+
 fun <S : FlowStep, Out : IOData.Output, T> T.FlowCoordinator(
     initialStep: S,
+    initialBackStack: List<BackStackEntry<S>> = emptyList(),
     controllersFactory: FlowCoordinator<S, Out>.(S) -> Controller,
 ): FlowCoordinator<S, Out> where T : FlowViewModel<S, Out>,
                                  T : ControllerModel =
     FlowCoordinator(
         hostModel = this,
         initialStep = initialStep,
+        initialBackStack = initialBackStack,
         controllersFactory = controllersFactory,
     )

@@ -41,15 +41,17 @@ internal class ParentControllerModelBindingDelegate(
             }
         }
 
-        if (defaultHandler()) {
-            return true
-        }
-
-        return false
+        return defaultHandler()
     }
 
     override fun onShow() {
-        childControllerManagersProvider.all.asReversed().any { it.onAttach() }
+        val childManagers = childControllerManagersProvider.all.asReversed()
+        for (manager in childManagers) {
+            if (manager.activeController != null) {
+                manager.onAttach()
+                if (manager.modal) break
+            }
+        }
     }
 
     override fun onHide() {
@@ -65,6 +67,12 @@ internal class ParentControllerModelBindingDelegate(
     override fun onTransitionEnd(enter: Boolean) {
         childControllerManagersProvider.all.forEach { manager ->
             manager.activeController?.onTransitionEnd(enter)
+        }
+    }
+
+    override fun onTransitionCanceled() {
+        childControllerManagersProvider.all.forEach { manager ->
+            manager.activeController?.onTransitionCanceled()
         }
     }
 

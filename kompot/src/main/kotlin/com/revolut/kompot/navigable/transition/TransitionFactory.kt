@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable.transition
 
+import com.revolut.kompot.navigable.ModalTransitionAnimation
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.transition.Transition.Companion.DURATION_DEFAULT
 
@@ -26,10 +27,10 @@ internal class TransitionFactory {
         TransitionAnimation.SLIDE_RIGHT_TO_LEFT -> SlideTransition(DURATION_DEFAULT, SlideTransition.Direction.RIGHT_TO_LEFT)
         TransitionAnimation.SLIDE_LEFT_TO_RIGHT -> SlideTransition(DURATION_DEFAULT, SlideTransition.Direction.LEFT_TO_RIGHT)
         TransitionAnimation.FADE -> FadeTransition(DURATION_DEFAULT)
-        TransitionAnimation.MODAL_SLIDE -> ModalShiftTransition(ModalAnimatable.Style.SLIDE)
-        TransitionAnimation.MODAL_FADE -> ModalShiftTransition(ModalAnimatable.Style.FADE)
-        TransitionAnimation.BOTTOM_DIALOG_SLIDE -> ModalShiftTransition(ModalAnimatable.Style.BOTTOM_DIALOG_SHEET)
         is TransitionAnimation.Custom -> CustomTransition(animation)
+        is ModalTransitionAnimation.ModalPopup -> ModalShiftTransition(ModalAnimatable.Style.POPUP, animation.showImmediately)
+        is ModalTransitionAnimation.ModalFullscreenFade -> ModalShiftTransition(ModalAnimatable.Style.FULLSCREEN_FADE, animation.showImmediately)
+        is ModalTransitionAnimation.ModalFullscreenSlideFromBottom -> ModalShiftTransition(ModalAnimatable.Style.FULLSCREEN_SLIDE_FROM_BOTTOM, animation.showImmediately)
+        is ModalTransitionAnimation.BottomDialog -> ModalShiftTransition(ModalAnimatable.Style.BOTTOM_DIALOG_SHEET, animation.showImmediately)
     }
-
 }

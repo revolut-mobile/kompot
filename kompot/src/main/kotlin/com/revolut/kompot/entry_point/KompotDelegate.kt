@@ -40,7 +40,7 @@ import com.revolut.kompot.utils.KompotIllegalLifecycleException
 
 internal class KompotDelegate(
     private val rootFlow: RootFlow<*, *>,
-    @LayoutRes private val defaultFlowLayout: Int?,
+    @LayoutRes private val defaultControllerContainer: Int?,
     private val trimCacheThreshold: Int,
     private val savedStateEnabled: Boolean = true,
     private val fullScreenEnabled: Boolean = true,
@@ -124,7 +124,7 @@ internal class KompotDelegate(
 
         return RootControllerManager(
             controllersCache = DefaultControllersCache(trimCacheThreshold),
-            defaultFlowLayout = defaultFlowLayout,
+            defaultControllerContainer = defaultControllerContainer,
             activityLauncher = activityLauncher,
             permissionsRequester = permissionsRequester,
             rootFlow = rootFlow,

@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable.vc.scroller
 
+import android.content.Context
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
@@ -68,7 +69,7 @@ internal class ScrollerModelBindingImpl<M : ScrollerViewModel<S, Out>, S : Scrol
             ScrollMode.HORIZONTAL,
             ScrollMode.PAGER -> RecyclerView.HORIZONTAL
         }
-        LinearLayoutManager(viewController.activity, orientation, false)
+        LinearLayoutManagerImpl(viewController.activity, orientation, false, 1)
     }
 
     private var _recyclerView: RecyclerView? = null
@@ -80,6 +81,7 @@ internal class ScrollerModelBindingImpl<M : ScrollerViewModel<S, Out>, S : Scrol
     }
 
     override fun onDestroy() {
+        parentControllerModelBindingDelegate.onDestroy()
         controllersAdapter.updateCache(controllersAdapter.currentList, emptyList())
     }
 
@@ -166,6 +168,25 @@ internal class ScrollerModelBindingImpl<M : ScrollerViewModel<S, Out>, S : Scrol
         }
     }
 
+    private class LinearLayoutManagerImpl(
+        context: Context,
+        @RecyclerView.Orientation orientation: Int,
+        reverseLayout: Boolean,
+        private val preloadItems: Int,
+    ): LinearLayoutManager(context, orientation, reverseLayout) {
+
+        override fun calculateExtraLayoutSpace(state: RecyclerView.State, extraLayoutSpace: IntArray) {
+            val pageSize = getPageSize()
+            val offscreenSpace = pageSize * preloadItems
+            extraLayoutSpace[0] = offscreenSpace
+            extraLayoutSpace[1] = offscreenSpace
+        }
+
+        private fun getPageSize(): Int {
+            return if (orientation == RecyclerView.HORIZONTAL) width - paddingLeft - paddingRight else height - paddingTop - paddingBottom
+        }
+
+    }
 }
 
 @Suppress("FunctionName")

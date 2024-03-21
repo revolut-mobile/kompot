@@ -21,12 +21,14 @@ import android.os.Parcelable
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.vc.common.PersistableState
 import com.revolut.kompot.navigable.vc.common.PersistableStorageState
+import kotlinx.coroutines.CoroutineDispatcher
 
 internal class UIStatesImpl<Domain : States.Domain, UI : States.UI>(
     private val initialState: Domain,
     stateMapper: States.Mapper<Domain, UI>,
+    mapStatesInBackground: Boolean,
     private val saveStateDelegate: SaveStateDelegate<Domain, *>?,
-) : ModelState<Domain, UI>(initialState, stateMapper), PersistableState {
+) : ModelState<Domain, UI>(initialState, stateMapper, mapStatesInBackground), PersistableState {
 
     override fun saveState(bundle: Bundle) {
         saveStateDelegate?.getRetainedState(current)?.let { retainedState ->
@@ -49,15 +51,19 @@ internal class UIStatesImpl<Domain : States.Domain, UI : States.UI>(
     }
 }
 
-internal class PersistentUIStatesImpl<Domain, UI : States.UI>(
+internal class PersistentUIStatesImpl<Domain : States.PersistentDomain, UI : States.UI>(
     private val key: PersistentModelStateKey,
-    initialState: Domain,
+    private val restoredStateReducer: (Domain, Domain) -> Domain,
+    private val initialState: Domain,
     stateMapper: States.Mapper<Domain, UI>,
-) : ModelState<Domain, UI>(initialState, stateMapper), PersistableStorageState where Domain : States.Domain, Domain : Parcelable {
+    mapStatesInBackground: Boolean,
+) : ModelState<Domain, UI>(initialState, stateMapper, mapStatesInBackground), PersistableStorageState {
 
     override fun restoreStateFromStorage(stateStorage: PersistentModelStateStorage) {
-        stateStorage.get<Domain>(key)?.let { state ->
-            update { state }
+        stateStorage.get<Domain>(key)?.let { restoredState ->
+            update {
+                restoredStateReducer(initialState, restoredState)
+            }
         }
     }
 
@@ -83,29 +89,35 @@ fun <Domain : States.Domain, UI : States.UI, Output : IOData.Output> UIStatesMod
     initialState: Domain,
     stateMapper: States.Mapper<Domain, UI>,
     saveStateDelegate: SaveStateDelegate<Domain, *>? = null,
+    mapStatesInBackground: Boolean = false,
 ): ModelState<Domain, UI> = UIStatesImpl(
     stateMapper = stateMapper,
     initialState = initialState,
+    mapStatesInBackground = mapStatesInBackground,
     saveStateDelegate = saveStateDelegate,
 )
 
 @Suppress("FunctionName")
-fun <Domain, UI : States.UI, Output : IOData.Output> UIStatesModel<Domain, UI, Output>.PersistentModelState(
+fun <Domain : States.PersistentDomain, UI : States.UI, Output : IOData.Output> UIStatesModel<Domain, UI, Output>.PersistentModelState(
     key: PersistentModelStateKey,
     initialState: Domain,
     stateMapper: States.Mapper<Domain, UI>,
-): ModelState<Domain, UI> where Domain : States.Domain, Domain : Parcelable = PersistentUIStatesImpl(
+    mapStatesInBackground: Boolean = false,
+    restoredStateReducer: (Domain, Domain) -> Domain = { _, restored -> restored },
+): ModelState<Domain, UI> = PersistentUIStatesImpl(
     key = key,
     stateMapper = stateMapper,
     initialState = initialState,
+    mapStatesInBackground = mapStatesInBackground,
+    restoredStateReducer = restoredStateReducer,
 )
 
 @JvmInline
 value class PersistentModelStateKey(val keyValue: String)
 
 interface PersistentModelStateStorage {
-    fun <T : Parcelable> get(key: PersistentModelStateKey): T?
+    fun <T : States.PersistentDomain> get(key: PersistentModelStateKey): T?
     fun remove(key: PersistentModelStateKey)
-    fun put(key: PersistentModelStateKey, state: States.Domain)
+    fun put(key: PersistentModelStateKey, state: States.PersistentDomain)
     suspend fun prefetchAll()
 }

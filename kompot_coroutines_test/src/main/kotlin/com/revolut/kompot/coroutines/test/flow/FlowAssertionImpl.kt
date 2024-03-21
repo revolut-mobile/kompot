@@ -17,6 +17,7 @@
 package com.revolut.kompot.coroutines.test.flow
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 
 internal class FlowAssertionImpl<T>(
@@ -66,6 +67,11 @@ internal class FlowAssertionImpl<T>(
 
     override fun assertComplete(): FlowAssertion<T> {
         assertTrue({ testState is TestState.Completed }, "Flow not completed")
+        return this
+    }
+
+    override fun assertNotCompleted(): FlowAssertion<T> {
+        assertFalse({ testState is TestState.Completed }, "Flow completed")
         return this
     }
 

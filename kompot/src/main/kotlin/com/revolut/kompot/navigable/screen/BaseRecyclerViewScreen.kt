@@ -33,8 +33,9 @@ import com.revolut.decorations.overlay.DelegatesOverlayItemDecoration
 import com.revolut.kompot.R
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.hooks.BaseRecyclerViewScreenHook
+import com.revolut.recyclerkit.delegates.DelegatesManager
+import com.revolut.recyclerkit.delegates.DiffAdapter
 import com.revolut.recyclerkit.delegates.RecyclerViewDelegate
-import com.revolut.rxdiffadapter.RxDiffAdapter
 
 abstract class BaseRecyclerViewScreen<
         UI_STATE : ScreenStates.UIList,
@@ -56,12 +57,11 @@ abstract class BaseRecyclerViewScreen<
     protected open val saveRecyclerViewState = true
     private var recyclerViewState: Parcelable? = null
 
-    protected open val listAdapter: RxDiffAdapter by lazy(LazyThreadSafetyMode.NONE) {
-        RxDiffAdapter(
-            delegates = emptyList(),
+    protected open val listAdapter: DiffAdapter by lazy(LazyThreadSafetyMode.NONE) {
+        DiffAdapter(
+            delegatesManager = DelegatesManager(emptyList()),
             async = false,
-            autoScrollToTop = autoScrollToTop,
-            detectMoves = true
+            autoScrollToTop = autoScrollToTop
         )
     }
 

@@ -51,6 +51,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
     private val containerId: Int,
     private val controller: FlowViewController,
     val model: M,
+    private val onStepUpdated: ((step: S) -> Unit)? = null,
     private val childControllerManagers: ControllerManagersHolder = ControllerManagersHolder(),
     private val parentControllerModelBindingDelegate: ParentControllerModelBindingDelegate = ParentControllerModelBindingDelegate(
         childControllerManagersProvider = childControllerManagers,
@@ -67,14 +68,11 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
 
     @VisibleForTesting
     internal var mainControllerContainer: ControllerContainer? = null
-    override val defaultFlowLayoutId: Int
-        get() = viewController.parentControllerManager.defaultFlowLayout
-            ?: R.layout.base_flow_container
     override val hasBackStack: Boolean
         get() = model.flowCoordinator.hasBackStack
 
     override fun onCreate() {
-        model.flowCoordinator.performCreate()
+        model.flowCoordinator.onCreate(viewController.key)
         viewController.tillDestroyBinding += model.flowCoordinator.navigationBinder()
             .bind(::processFlowNavigationCommand)
 
@@ -85,6 +83,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
     }
 
     override fun onDestroy() {
+        model.flowCoordinator.onDestroy()
         childControllerManagers.all.forEach { manager -> manager.onDestroy() }
         navActionsScheduler.cancel(viewController.key.value)
     }
@@ -94,11 +93,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
             return true
         }
 
-        if (handleBackStack()) {
-            return true
-        }
-
-        return false
+        return handleBackStack()
     }
 
     private fun handleBackStack(immediate: Boolean = false) =
@@ -133,6 +128,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
             id = container.containerId
         )
         controllerManager.show(controller, animation, backward, viewController)
+        onStepUpdated?.invoke(model.flowCoordinator.step)
     }
 
     private fun pushController(command: PushControllerCommand<S, Out>) {
@@ -172,7 +168,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
         return childControllerManagers.getOrAdd(id) {
             ControllerManager(
                 modal = modal,
-                defaultFlowLayout = viewController.parentControllerManager.defaultFlowLayout,
+                defaultControllerContainer = viewController.parentControllerManager.defaultControllerContainer,
                 controllersCache = controllersCache,
                 controllerViewHolder = getControllerViewHolder(
                     controllerContainer as ViewGroup,
@@ -289,6 +285,7 @@ internal class FlowModelBindingImpl<M : FlowViewModel<S, Out>, S : FlowStep, Out
 fun <M : FlowViewModel<S, Out>, S : FlowStep, Out : IOData.Output> FlowViewController.ModelBinding(
     model: M,
     containerId: Int = R.id.container,
+    onStepUpdated: ((step: S) -> Unit)? = null
 ): FlowModelBinding {
-    return FlowModelBindingImpl(containerId, this, model)
+    return FlowModelBindingImpl(containerId, this, model, onStepUpdated)
 }

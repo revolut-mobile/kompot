@@ -212,7 +212,7 @@ abstract class ControllerModel {
         block = block,
     )
 
-    protected suspend fun <T> withLoading(block: suspend () -> T): T = withLoading(
+    suspend fun <T> withLoading(block: suspend () -> T): T = withLoading(
         dialogDisplayer = dialogDisplayer,
         mainDispatcher = mainDispatcher,
         block = block,
@@ -240,35 +240,41 @@ abstract class ControllerModel {
 
     suspend fun NavigationRequest.navigate() = navigate(eventsDispatcher)
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     fun <T : IOData.Output> Screen<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(eventsDispatcher, style, onResult)
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     fun <T : IOData.Output> Flow<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(eventsDispatcher, style, onResult)
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     suspend fun <T : IOData.Output> Flow<T>.showModalSuspend(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     ): T = suspendCoroutine { emitter ->
         showModal(eventsDispatcher, style, emitter::resume)
     }
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     @OptIn(ExperimentalKompotApi::class)
     fun <T : IOData.Output> ScrollerFlow<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(eventsDispatcher, style, onResult)
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     fun <T : IOData.Output> ViewController<T>.showModal(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
         onResult: ((T) -> Unit)? = null
     ) = showModal(eventsDispatcher, style, onResult)
 
+    @Deprecated("This call doesn't support saved state. Use ModalCoordinator or FlowCoordinator to dispatch modals", ReplaceWith(""))
     suspend fun <T : IOData.Output> Screen<T>.showModalSuspend(
-        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+        style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     ): T = suspendCoroutine { emitter ->
         showModal(eventsDispatcher, style, emitter::resume)
     }

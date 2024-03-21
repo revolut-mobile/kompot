@@ -11,8 +11,8 @@ ext{
     appcompat_version = '1.1.0'
     constraint_version = '1.1.3'
     material_version = '1.2.0-beta01'
-    recycler_kit_version = '1.0.10'
-    recyclerKitRxDiffAdapterVersion = '1.0.7'
+    recycler_kit_version = '1.1.2'
+    recyclerKitRxDiffAdapterVersion = '1.1.1'
 
     timber_version = '4.7.1'
 

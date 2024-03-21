@@ -45,7 +45,8 @@ import com.revolut.kompot.navigable.vc.ViewControllerModel
 import com.revolut.kompot.navigable.vc.flow.FlowViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.jupiter.api.Assertions
-import java.util.*
+import java.util.LinkedList
+import java.util.Queue
 
 fun <STEP : FlowStep, OUTPUT : IOData.Output> BaseFlowModel<*, STEP, OUTPUT>.test()
         : FlowModelAssertion<STEP, OUTPUT> = BaseFlowModelAssertion(this)
@@ -73,10 +74,16 @@ interface FlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> {
     fun assertDestination(assertion: (NavigationDestination) -> Boolean)
     fun assertError(assertion: (Throwable) -> Boolean)
     fun assertModalScreen(assertion: (Screen<*>) -> Boolean): FlowModelAssertion<STEP, OUTPUT>
+    fun assertHasBackStack(): FlowModelAssertion<STEP, OUTPUT>
+    fun assertNoBackStack(): FlowModelAssertion<STEP, OUTPUT>
 
     fun <T : IOData.Output> assertModalViewController(
         assertion: (ViewController<in T>) -> Boolean,
         output: T
+    ): FlowModelAssertion<STEP, OUTPUT>
+
+    fun assertModalScreenFromFlowCoordinator(
+        assertion: (Screen<*>) -> Boolean,
     ): FlowModelAssertion<STEP, OUTPUT>
 
     fun <T : IOData.Output> assertModalScreen(
@@ -121,6 +128,7 @@ internal abstract class CommonFlowModelAssertions<STEP : FlowStep, OUTPUT : IODa
     protected val commandQueue: Queue<FlowNavigationCommand<STEP, OUTPUT>> = LinkedList()
 
     abstract val eventsDispatcher: EventsDispatcher
+    abstract val hasBackStack: Boolean
     abstract fun getCurrentController(): Controller
     abstract fun getCurrentStep(): STEP
 
@@ -285,6 +293,22 @@ internal abstract class CommonFlowModelAssertions<STEP : FlowStep, OUTPUT : IODa
         return this
     }
 
+    override fun assertModalScreenFromFlowCoordinator(assertion: (Screen<*>) -> Boolean): FlowModelAssertion<STEP, OUTPUT> {
+        argumentCaptor<NavigationEvent>().apply {
+            verify(eventsDispatcher).handleEvent(capture())
+            clearInvocations(eventsDispatcher)
+            val destination = firstValue.destination
+            val viewController = (destination as ModalDestination.CallbackController).controller
+            Assertions.assertTrue(viewController is Screen<*>, "$viewController is not instance of Screen")
+            require(viewController is Screen<*>)
+            Assertions.assertTrue(
+                assertion(viewController as Screen<*>),
+                "\nAssertion failed for screen: ${firstValue.destination}!"
+            )
+        }
+        return this
+    }
+
     override fun assertModalFlow(assertion: (Flow<*>) -> Boolean) = apply {
         argumentCaptor<NavigationEvent>().apply {
             verify(eventsDispatcher).handleEvent(capture())
@@ -327,5 +351,13 @@ internal abstract class CommonFlowModelAssertions<STEP : FlowStep, OUTPUT : IODa
         @Suppress("UNCHECKED_CAST") val actualModel = dialogQueue.poll() as MODEL
         val result = assertion(actualModel)
         result?.let { dialogResultStream.tryEmit(result) }
+    }
+
+    override fun assertHasBackStack(): FlowModelAssertion<STEP, OUTPUT> = apply {
+        Assertions.assertTrue(hasBackStack, "Expected hasBackStack true, but got false")
+    }
+
+    override fun assertNoBackStack(): FlowModelAssertion<STEP, OUTPUT> = apply {
+        Assertions.assertFalse(hasBackStack, "Expected hasBackStack false, but got true")
     }
 }

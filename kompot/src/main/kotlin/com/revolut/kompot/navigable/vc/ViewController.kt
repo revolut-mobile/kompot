@@ -18,6 +18,8 @@ package com.revolut.kompot.navigable.vc
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcelable
+import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
 import androidx.core.view.postDelayed
@@ -31,8 +33,8 @@ import com.revolut.kompot.di.flow.ControllerComponent
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.findRootFlow
-import com.revolut.kompot.navigable.hooks.PersistentModelStateStorageHook
 import com.revolut.kompot.navigable.hooks.LifecycleViewTagHook
+import com.revolut.kompot.navigable.hooks.PersistentModelStateStorageHook
 import com.revolut.kompot.navigable.utils.Preconditions
 import com.revolut.kompot.navigable.utils.hideKeyboard
 import com.revolut.kompot.navigable.utils.showKeyboard
@@ -40,8 +42,14 @@ import com.revolut.kompot.navigable.vc.binding.ViewControllerModelApi
 import com.revolut.kompot.navigable.vc.di.ViewControllerComponent
 import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import timber.log.Timber
 
 abstract class ViewController<OUTPUT : IOData.Output> : Controller(), ViewControllerApi {
+
+    protected open val viewSavedStateEnabled = false
+    protected open val needKeyboard: Boolean = false
 
     protected abstract val controllerModel: ViewControllerModelApi<OUTPUT>
     private val internalControllerModel get() =  controllerModel as ControllerModel
@@ -51,15 +59,13 @@ abstract class ViewController<OUTPUT : IOData.Output> : Controller(), ViewContro
 
     internal var onResult: (data: OUTPUT) -> Unit = { }
 
-    open val needKeyboard: Boolean = false
-
     abstract override val component: ViewControllerComponent
     override val controllerExtensions by lazy(LazyThreadSafetyMode.NONE) {
         component.getControllerExtensions()
     }
 
     override fun createView(inflater: LayoutInflater): View {
-        val inflatedLayout = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false)
+        val inflatedLayout = getViewInflater(inflater).inflate(layoutId, null, false)
         require(inflatedLayout is ControllerContainer) { "$controllerName: root ViewGroup should be ControllerContainer" }
         inflatedLayout.applyEdgeToEdgeConfig()
         inflatedLayout.tag = this.controllerName
@@ -135,6 +141,11 @@ abstract class ViewController<OUTPUT : IOData.Output> : Controller(), ViewContro
     override fun onTransitionEnd(enter: Boolean) {
         super.onTransitionEnd(enter)
         modelBinding.onTransitionEnd(enter)
+    }
+
+    override fun onTransitionCanceled() {
+        super.onTransitionCanceled()
+        modelBinding.onTransitionCanceled()
     }
 
     override fun onTransitionRunUp(enter: Boolean) {
@@ -216,10 +227,20 @@ abstract class ViewController<OUTPUT : IOData.Output> : Controller(), ViewContro
 
     final override fun saveState(outState: Bundle) {
         modelBinding.saveState(outState)
+        if (viewSavedStateEnabled) {
+            val containerState = SparseArray<Parcelable>()
+            (view as ControllerContainer).saveState(containerState)
+            outState.putSparseParcelableArray(CONTAINER_VIEW_STATE_KEY, containerState)
+        }
     }
 
     final override fun restoreState(state: Bundle) {
         modelBinding.restoreState(state)
+        val containerState = state.getSparseParcelableArray<Parcelable>(CONTAINER_VIEW_STATE_KEY)
+        if (containerState != null) {
+            (view as ControllerContainer).restoreState(containerState)
+        }
+        (internalControllerModel as? ViewControllerModel<*>)?._restored = true
     }
 
      private fun restorePersistentState() {
@@ -249,4 +270,18 @@ abstract class ViewController<OUTPUT : IOData.Output> : Controller(), ViewContro
     protected open fun onShown(view: View) = Unit
     protected open fun onHidden() = Unit
     protected open fun onDestroyed() = Unit
+
+    protected fun <T> Flow<T>.collectTillHide(
+        onError: suspend (Throwable) -> Unit = { Timber.e(it) },
+        onSuccessCompletion: suspend () -> Unit = {},
+        onEach: suspend (T) -> Unit = {}
+    ): Job = collectTillDetachView(
+        onError = onError,
+        onSuccessCompletion = onSuccessCompletion,
+        onEach = onEach,
+    )
+
+    companion object {
+        internal const val CONTAINER_VIEW_STATE_KEY = "CONTAINER_VIEW_STATE_KEY"
+    }
 }

@@ -34,6 +34,7 @@ interface ModelBinding : SavedStateOwner {
     fun onHide() = Unit
     fun onTransitionStart(enter: Boolean) = Unit
     fun onTransitionEnd(enter: Boolean) = Unit
+    fun onTransitionCanceled() = Unit
     fun onHostPaused() = Unit
     fun onHostResumed() = Unit
     fun onHostStarted() = Unit

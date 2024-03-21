@@ -43,6 +43,9 @@ internal class BaseFlowModelAssertion<STEP : FlowStep, OUTPUT : IOData.Output> i
     override val eventsDispatcher: EventsDispatcher
         get() = flowModel.eventsDispatcher
 
+    override val hasBackStack: Boolean
+        get() = flowModel.hasBackStack
+
     init {
         flowModel.applyTestDependencies(dialogDisplayer = dialogDisplayer)
         flowModel.setInitialState()

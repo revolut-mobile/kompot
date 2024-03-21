@@ -37,7 +37,7 @@ class DefaultFeatureRegistryTest {
     private val gateway1 = FakeFeatureGateway(gatewayController = null)
     private val gateway2 = FakeFeatureGateway(gatewayController = null)
     private val gateway3WithContent = FakeFeatureGateway(
-        gatewayController = TestViewController(""),
+        gatewayController = TestViewController("", instrumented = false),
         destination = object : NavigationDestination {}
     )
 

@@ -21,14 +21,14 @@ import com.revolut.kompot.R
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.vc.binding.ModelBinding
+import com.revolut.kompot.navigable.vc.common.PersistableStateBindingImpl
 import com.revolut.kompot.navigable.vc.common.PersistableStateController
 import com.revolut.kompot.navigable.vc.common.PersistableStateModel
 import com.revolut.kompot.navigable.vc.common.PersistableStateModelBinding
 import com.revolut.kompot.navigable.vc.composite.CompositeModelBinding
-import com.revolut.kompot.navigable.vc.flow.FlowViewController
 import com.revolut.kompot.navigable.vc.flow.FlowModelBinding
 import com.revolut.kompot.navigable.vc.flow.FlowModelBindingImpl
-import com.revolut.kompot.navigable.vc.common.PersistableStateBindingImpl
+import com.revolut.kompot.navigable.vc.flow.FlowViewController
 import com.revolut.kompot.navigable.vc.flow.FlowViewModel
 
 interface StatefulFlowBinding : FlowModelBinding, PersistableStateModelBinding
@@ -41,7 +41,7 @@ interface StatefulFlowModel<State : Parcelable, Step : FlowStep, Out : IOData.Ou
     : FlowViewModel<Step, Out>, PersistableStateModel<State, Out>
 
 internal class StatefulFlowBindingImpl<State : Parcelable, S : FlowStep, Out : IOData.Output>(
-    containerId: Int = R.id.container,
+    containerId: Int,
     controller: StatefulFlowViewController,
     model: StatefulFlowModel<State, S, Out>,
     private val flowModelBinding: FlowModelBinding = FlowModelBindingImpl(
@@ -58,15 +58,16 @@ internal class StatefulFlowBindingImpl<State : Parcelable, S : FlowStep, Out : I
         )
     )
 ) {
-    override val defaultFlowLayoutId: Int get() = flowModelBinding.defaultFlowLayoutId
     override val hasBackStack: Boolean get() = flowModelBinding.hasBackStack
 }
 
 @Suppress("FunctionName")
 fun <State : Parcelable, S : FlowStep, Out : IOData.Output> StatefulFlowViewController.ModelBinding(
     model: StatefulFlowModel<State, S, Out>,
+    containerId: Int = R.id.container,
 ): StatefulFlowBinding {
     return StatefulFlowBindingImpl(
+        containerId = containerId,
         controller = this,
         model = model,
     )

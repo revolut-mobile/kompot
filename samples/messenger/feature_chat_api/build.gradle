@@ -11,5 +11,5 @@ addDependencies(
 )
 
 android {
-        namespace "com.revolut.kompot.sample.feature.api.chat"
+    namespace "com.revolut.kompot.sample.feature.api.chat"
 }

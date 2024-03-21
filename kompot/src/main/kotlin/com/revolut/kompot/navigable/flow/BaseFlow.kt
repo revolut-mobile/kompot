@@ -85,7 +85,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
     final override var onFlowResult: (data: OUTPUT_DATA) -> Unit = { }
 
     override val layoutId: Int
-        get() = parentControllerManager.defaultFlowLayout ?: R.layout.base_flow_container
+        get() = parentControllerManager.defaultControllerContainer ?: R.layout.base_flow_container
 
     @VisibleForTesting
     internal lateinit var mainControllerContainer: ControllerContainer
@@ -104,7 +104,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
     protected open val containerId: Int = R.id.container
 
     override fun createView(inflater: LayoutInflater): View {
-        val inflatedLayout = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false)
+        val inflatedLayout = getViewInflater(inflater).inflate(layoutId, null, false)
         require(inflatedLayout is ControllerContainer) { "$controllerName: root ViewGroup should be ControllerContainer" }
         inflatedLayout.applyEdgeToEdgeConfig()
         inflatedLayout.tag = this.controllerName
@@ -142,7 +142,7 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         return childControllerManagers.getOrAdd(id) {
             ControllerManager(
                 modal = modal,
-                defaultFlowLayout = parentControllerManager.defaultFlowLayout,
+                defaultControllerContainer = parentControllerManager.defaultControllerContainer,
                 controllersCache = controllersCache,
                 controllerViewHolder = getControllerViewHolder(controllerContainer as ViewGroup, modal),
                 onAttachController = ::onChildControllerAttached,
@@ -278,7 +278,12 @@ abstract class BaseFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA 
         updateUi()
         lifecycleDelegate.onAttach()
 
-        childControllerManagers.all.asReversed().any { it.onAttach() }
+        for (manager in childControllerManagers.all.asReversed()) {
+            if (manager.activeController != null) {
+                manager.onAttach()
+                if (manager.modal) break
+            }
+        }
         KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerAttached(this) }
     }
 

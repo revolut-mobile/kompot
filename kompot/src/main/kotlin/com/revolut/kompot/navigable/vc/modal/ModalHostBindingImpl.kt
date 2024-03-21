@@ -27,9 +27,17 @@ internal class ModalHostBindingImpl<M : ModalHostViewModel<S, Out>, S : FlowStep
     private val controller: ModalHostController,
     val model: M,
 ) : ModalHostBinding {
-    override fun onCreate() = Unit
-    override fun saveState(outState: Bundle) = Unit
-    override fun restoreState(state: Bundle) = Unit
+
+    override fun onCreate() {
+        model.modalCoordinator.performCreate()
+    }
+
+    override fun saveState(outState: Bundle) {
+        model.modalCoordinator.saveState(outState)
+    }
+    override fun restoreState(state: Bundle) {
+        model.modalCoordinator.restoreState(state)
+    }
 }
 
 @Suppress("FunctionName")

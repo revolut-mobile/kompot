@@ -5,8 +5,8 @@ import com.revolut.kompot.sample.feature.chat.api.ChatApi
 import com.revolut.kompot.sample.feature.chat.ui.screens.chat.di.ChatControllerInjector
 import com.revolut.kompot.sample.feature.chat.ui.screens.chat_list.di.ChatListControllerInjector
 import com.revolut.kompot.sample.feature.contacts.api.ContactsApi
-import com.revolut.kompot.sample.utils.LazySingletonHolder
 import com.revolut.kompot.sample.utils.api.UtilsApi
+import com.revolut.kompot.sample.utils.LazySingletonHolder
 import com.revolut.kompot.sample.utils.di.FeatureScope
 import dagger.Component
 

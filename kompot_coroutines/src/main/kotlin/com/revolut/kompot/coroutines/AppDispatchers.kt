@@ -24,28 +24,22 @@ import kotlin.coroutines.CoroutineContext
 
 object AppDispatchers {
 
-    val Default
-        get() = dispatcherOverride {
-            Dispatchers.Default
-        }
+    val Default: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.Default
 
-    val IO
-        get() = dispatcherOverride {
-            Dispatchers.IO
-        }
+    val IO: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.IO
 
-    val Unconfined
-        get() = dispatcherOverride {
-            Dispatchers.Unconfined
-        }
+    val Unconfined: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.Unconfined
 
     /**
      * Main is testable by default. We can override it with Dispatchers.setMain(context) call
      */
-    internal val Main get() = Dispatchers.Main
+    internal val Main: CoroutineDispatcher get() = Dispatchers.Main
 
     @VisibleForTesting
-    var dispatcherOverride: (() -> CoroutineContext) -> CoroutineContext = { it() }
+    var dispatcherOverride: () -> CoroutineDispatcher? = { null }
 }
 
 /**

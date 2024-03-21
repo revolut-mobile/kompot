@@ -25,7 +25,7 @@ interface ChatContract {
     @Parcelize
     data class RetainedState(
         val messageInputText: String
-    ) : States.RetainedDomain
+    ) : States.PersistentDomain
 
     data class UIState(
         val contactName: String,

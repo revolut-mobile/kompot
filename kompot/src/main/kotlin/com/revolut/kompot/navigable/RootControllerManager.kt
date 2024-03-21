@@ -30,12 +30,12 @@ internal class RootControllerManager(
     private val rootFlow: RootFlow<*, *>,
     private val activityLauncher: ActivityLauncher,
     private val permissionsRequester: PermissionsRequester,
-    @LayoutRes defaultFlowLayout: Int?,
+    @LayoutRes defaultControllerContainer: Int?,
     controllersCache: ControllersCache,
     hooksProvider: HooksProvider,
 ) : ControllerManager(
     modal = false,
-    defaultFlowLayout = defaultFlowLayout,
+    defaultControllerContainer = defaultControllerContainer,
     controllersCache = controllersCache,
     controllerViewHolder = RootControllerViewHolder(),
     onAttachController = null,
@@ -76,8 +76,8 @@ internal class RootControllerManager(
     }
 
     override fun onDestroy() {
-        controllersCache.clearCache()
         super.onDestroy()
+        controllersCache.clearCache()
     }
 
 }

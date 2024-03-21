@@ -75,6 +75,7 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "junit:junit:$junitVersion"
     testImplementation "androidx.test:core-ktx:$androidxTestVersion"
+    testImplementation project(':kompot_coroutines_test')
 
     testImplementation("org.robolectric:robolectric:$robolectricVersion") {
         exclude group: "com.google.auto.service", module: "auto-service"

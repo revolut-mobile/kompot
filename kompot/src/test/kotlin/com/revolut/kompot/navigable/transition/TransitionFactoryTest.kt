@@ -16,6 +16,8 @@
 
 package com.revolut.kompot.navigable.transition
 
+import com.revolut.kompot.common.ModalDestination
+import com.revolut.kompot.navigable.ModalTransitionAnimation
 import com.revolut.kompot.navigable.TransitionAnimation
 import kotlinx.parcelize.Parcelize
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -47,10 +49,24 @@ internal class TransitionFactoryTest {
             arrayOf(TransitionAnimation.SLIDE_LEFT_TO_RIGHT, SlideTransition::class),
             arrayOf(TransitionAnimation.SLIDE_RIGHT_TO_LEFT, SlideTransition::class),
             arrayOf(TransitionAnimation.FADE, FadeTransition::class),
-            arrayOf(TransitionAnimation.MODAL_SLIDE, ModalShiftTransition::class),
-            arrayOf(TransitionAnimation.MODAL_FADE, ModalShiftTransition::class),
-            arrayOf(TransitionAnimation.BOTTOM_DIALOG_SLIDE, ModalShiftTransition::class),
+            arrayOf(ModalTransitionAnimation.ModalPopup(), ModalShiftTransition::class),
+            arrayOf(ModalTransitionAnimation.ModalFullscreenSlideFromBottom(), ModalShiftTransition::class),
+            arrayOf(ModalTransitionAnimation.BottomDialog(), ModalShiftTransition::class),
             arrayOf(TestCustomTransitionAnimation, CustomTransition::class),
+            arrayOf(
+                ModalTransitionAnimation.ModalFullscreenFade(
+                    showImmediately = false,
+                    style = ModalDestination.Style.FULLSCREEN_IMMEDIATE
+                ),
+                ModalShiftTransition::class
+            ),
+            arrayOf(
+                ModalTransitionAnimation.ModalFullscreenFade(
+                    showImmediately = true,
+                    style = ModalDestination.Style.FULLSCREEN_FADE
+                ),
+                ModalShiftTransition::class
+            ),
         )
     }
 

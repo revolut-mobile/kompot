@@ -33,27 +33,31 @@ import com.revolut.kompot.view.ControllerContainer
 internal class RootNavigator(private val rootFlow: RootFlow<*, *>) {
     private val addOpenExternalForResultListeners = mutableListOf<() -> Unit>()
 
-    fun openModal(destination: ModalDestination, callerController: Controller) {
+    fun openModal(destination: ModalDestination, callerController: Controller, showImmediately: Boolean) {
         when (destination) {
             is ModalDestination.ExplicitScreen<*> -> {
-                openModalScreen(destination, callerController)
+                openModalScreen(destination, callerController, showImmediately)
             }
 
             is ModalDestination.ExplicitFlow<*> -> {
-                openModalFlow(destination, callerController)
+                openModalFlow(destination, callerController, showImmediately)
             }
 
             is ModalDestination.ExplicitScrollerFlow<*> -> {
-                openModalScrollerFlow(destination, callerController)
+                openModalScrollerFlow(destination, callerController, showImmediately)
             }
 
             is ModalDestination.CallbackController -> {
-                openModalCallbackController(destination, callerController)
+                openModalCallbackController(destination, callerController, showImmediately)
             }
         }
     }
 
-    private fun <T : IOData.Output> openModalScreen(destination: ModalDestination.ExplicitScreen<T>, callerController: Controller) {
+    private fun <T : IOData.Output> openModalScreen(
+        destination: ModalDestination.ExplicitScreen<T>,
+        callerController: Controller,
+        showImmediately: Boolean
+    ) {
         rootFlow.open(
             controller = destination.screen.apply {
                 (this as Controller).run {
@@ -67,11 +71,16 @@ internal class RootNavigator(private val rootFlow: RootFlow<*, *>) {
                 }
             } as Controller,
             style = destination.style,
-            parentController = callerController.getFlow()
+            parentController = callerController.getFlow(),
+            showImmediately = showImmediately,
         )
     }
 
-    private fun <T : IOData.Output> openModalFlow(destination: ModalDestination.ExplicitFlow<T>, callerController: Controller) {
+    private fun <T : IOData.Output> openModalFlow(
+        destination: ModalDestination.ExplicitFlow<T>,
+        callerController: Controller,
+        showImmediately: Boolean
+    ) {
         rootFlow.open(
             controller = destination.flow.apply {
                 (this as Controller).run {
@@ -85,12 +94,17 @@ internal class RootNavigator(private val rootFlow: RootFlow<*, *>) {
                 }
             } as Controller,
             style = destination.style,
-            parentController = callerController.getFlow()
+            parentController = callerController.getFlow(),
+            showImmediately = showImmediately,
         )
     }
 
     @OptIn(ExperimentalKompotApi::class)
-    private fun <T : IOData.Output> openModalScrollerFlow(destination: ModalDestination.ExplicitScrollerFlow<T>, callerController: Controller) {
+    private fun <T : IOData.Output> openModalScrollerFlow(
+        destination: ModalDestination.ExplicitScrollerFlow<T>,
+        callerController: Controller,
+        showImmediately: Boolean
+    ) {
         rootFlow.open(
             controller = destination.flow.apply {
                 (this as Controller).run {
@@ -104,12 +118,17 @@ internal class RootNavigator(private val rootFlow: RootFlow<*, *>) {
                 }
             } as Controller,
             style = destination.style,
-            parentController = callerController.getFlow()
+            parentController = callerController.getFlow(),
+            showImmediately = showImmediately,
         )
     }
 
     @OptIn(ExperimentalKompotApi::class)
-    private fun openModalCallbackController(destination: ModalDestination.CallbackController, callerController: Controller) {
+    private fun openModalCallbackController(
+        destination: ModalDestination.CallbackController,
+        callerController: Controller,
+        showImmediately: Boolean
+    ) {
         rootFlow.open(
             controller = destination.controller.apply {
                 when (this) {
@@ -121,7 +140,8 @@ internal class RootNavigator(private val rootFlow: RootFlow<*, *>) {
                 }
             },
             style = destination.style,
-            parentController = callerController.getFlow()
+            parentController = callerController.getFlow(),
+            showImmediately = showImmediately,
         )
     }
 

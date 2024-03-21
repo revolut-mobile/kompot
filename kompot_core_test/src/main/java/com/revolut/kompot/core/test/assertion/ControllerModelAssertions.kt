@@ -19,12 +19,17 @@ package com.revolut.kompot.core.test.assertion
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.clearInvocations
 import com.nhaarman.mockitokotlin2.never
+import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.ModalDestination
 import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.common.NavigationEvent
+import com.revolut.kompot.dialog.DialogDisplayer
+import com.revolut.kompot.dialog.DialogModel
+import com.revolut.kompot.dialog.DialogModelResult
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.flow.Flow
 import com.revolut.kompot.navigable.screen.Screen
 import com.revolut.kompot.navigable.vc.ViewController
@@ -72,13 +77,28 @@ internal object ControllerModelAssertions {
             verify(eventsDispatcher).handleEvent(capture())
             clearInvocations(eventsDispatcher)
             val destination = firstValue.destination
-            val screen = (destination as ModalDestination.ExplicitScreen<T>).screen
-            Assertions.assertTrue(
-                assertion(screen),
-                "\nAssertion failed for screen! Actual value: ${firstValue.destination}\n"
-            )
+            if ((destination as? ModalDestination.ExplicitScreen<T>) != null) {
+                Assertions.assertTrue(
+                    assertion(destination.screen),
+                    "\nAssertion failed for screen! Actual value: ${firstValue.destination}\n"
+                )
 
-            destination.onResult?.invoke(outputToReturn)
+                destination.onResult?.invoke(outputToReturn)
+                return
+            }
+
+            // when launched using modalCoordinator in ViewControllerModel
+            if ((destination as? ModalDestination.CallbackController)?.controller != null) {
+                Assertions.assertTrue(
+                    assertion(destination.controller as Screen<T>),
+                    "\nAssertion failed for screen! Actual value: ${firstValue.destination}\n"
+                )
+
+                (destination.controller as Screen<T>).onScreenResult.invoke(outputToReturn)
+                return
+            }
+
+            throw IllegalStateException("Can't assert modal screen\n$destination is not supported")
         }
     }
 
@@ -117,6 +137,39 @@ internal object ControllerModelAssertions {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun <T : IOData.Output> assertModalViewController(
+        eventsDispatcher: EventsDispatcher,
+        outputToReturn: T,
+        assertion: (ViewController<in T>) -> Boolean
+    ) {
+        argumentCaptor<NavigationEvent>().apply {
+            verify(eventsDispatcher).handleEvent(capture())
+            clearInvocations(eventsDispatcher)
+            val controller = (firstValue.destination as ModalDestination.CallbackController).controller
+            Assertions.assertTrue(
+                assertion(controller as ViewController<T>),
+                "\nAssertion failed for viewController! Actual value: ${firstValue.destination}\n"
+            )
+            controller.postResult(outputToReturn)
+        }
+    }
+
+    fun assertModalController(
+        eventsDispatcher: EventsDispatcher,
+        assertion: (Controller) -> Boolean
+    ) {
+        argumentCaptor<NavigationEvent>().apply {
+            verify(eventsDispatcher).handleEvent(capture())
+            clearInvocations(eventsDispatcher)
+            val controller = (firstValue.destination as ModalDestination.CallbackController).controller
+            Assertions.assertTrue(
+                assertion(controller),
+                "\nAssertion failed for controller! Actual value: ${firstValue.destination}\n"
+            )
+        }
+    }
+
     fun assertDestination(
         destination: NavigationDestination,
         eventsDispatcher: EventsDispatcher,
@@ -138,6 +191,43 @@ internal object ControllerModelAssertions {
         argumentCaptor<NavigationEvent>().apply {
             verify(eventsDispatcher, never()).handleEvent(capture())
             clearInvocations(eventsDispatcher)
+        }
+    }
+
+    fun assertDialog(dialogDisplayer: DialogDisplayer, model: DialogModel<*>) {
+        argumentCaptor<DialogModel<DialogModelResult>>().apply {
+            verify(dialogDisplayer).showDialog(capture())
+            clearInvocations(dialogDisplayer)
+            val dialogModel = firstValue
+            Assertions.assertEquals(
+                model,
+                dialogModel,
+                "\nAssertion failed for dialog!"
+            )
+        }
+    }
+
+    /** Useful for cases where we show 2+ dialogs one after another. `assertDialog()` implementation above
+     *  doesn't support sequential invocation, in contrast to `FlowModelAssertion.assertDialog()` */
+    fun assertDialogs(dialogDisplayer: DialogDisplayer, vararg models: DialogModel<*>) {
+        argumentCaptor<DialogModel<DialogModelResult>>().apply {
+            verify(dialogDisplayer, times(models.size)).showDialog(capture())
+            clearInvocations(dialogDisplayer)
+            models.forEachIndexed { index, model ->
+                val dialogModel = allValues[index]
+                Assertions.assertEquals(
+                    model,
+                    dialogModel,
+                    "\nAssertion failed for dialog!"
+                )
+            }
+        }
+    }
+
+    fun assertNoDialog(dialogDisplayer: DialogDisplayer) {
+        argumentCaptor<DialogModel<DialogModelResult>>().apply {
+            verify(dialogDisplayer, never()).showDialog(capture())
+            clearInvocations(dialogDisplayer)
         }
     }
 }

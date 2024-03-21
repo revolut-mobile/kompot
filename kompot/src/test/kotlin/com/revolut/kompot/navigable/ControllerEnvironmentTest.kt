@@ -20,8 +20,8 @@ import android.view.LayoutInflater
 import android.view.View
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import com.revolut.kompot.di.flow.ParentFlow
 import com.revolut.kompot.di.flow.ControllerComponent
+import com.revolut.kompot.di.flow.ParentFlow
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -32,58 +32,57 @@ internal class ControllerEnvironmentTest {
     fun `controller is modal root when it is the only screen in the modal container`() {
         val controller = TestController().apply {
             bind(
-                controllerManager = TestControllerManager(modal = true),
+                controllerManager = createControllerManager(modal = true),
                 parentController = TestParentController(hasBackStack = false)
             )
         }
-        assertTrue(controller.env.modalRoot)
+        assertTrue(controller.env.isModalRoot())
     }
 
     @Test
     fun `controller is modal root when it is the only screen in the modal flow`() {
         val controller = TestController().apply {
             bind(
-                controllerManager = TestControllerManager(modal = false),
+                controllerManager = createControllerManager(modal = false),
                 parentController = TestParentController(hasBackStack = false).apply {
                     bind(
-                        controllerManager = TestControllerManager(modal = true),
+                        controllerManager = createControllerManager(modal = true),
                         parentController = TestParentController(hasBackStack = false)
                     )
                 }
             )
         }
-        assertTrue(controller.env.modalRoot)
+        assertTrue(controller.env.isModalRoot())
     }
 
     @Test
     fun `controller is not modal root when it is not displayed in the modal`() {
         val controller = TestController().apply {
             bind(
-                controllerManager = TestControllerManager(modal = false),
+                controllerManager = createControllerManager(modal = false),
                 parentController = TestParentController(hasBackStack = false)
             )
         }
-        assertFalse(controller.env.modalRoot)
+        assertFalse(controller.env.isModalRoot())
     }
 
     @Test
     fun `controller is not modal root when parent flow has back stack`() {
         val controller = TestController().apply {
             bind(
-                controllerManager = TestControllerManager(modal = false),
+                controllerManager = createControllerManager(modal = false),
                 parentController = TestParentController(hasBackStack = true).apply {
                     bind(
-                        controllerManager = TestControllerManager(modal = true),
+                        controllerManager = createControllerManager(modal = true),
                         parentController = TestParentController(hasBackStack = false)
                     )
                 }
             )
         }
-        assertFalse(controller.env.modalRoot)
+        assertFalse(controller.env.isModalRoot())
     }
 
-    @Suppress("FunctionName")
-    private fun TestControllerManager(modal: Boolean): ControllerManager = mock {
+    private fun createControllerManager(modal: Boolean): ControllerManager = mock {
         on { this.modal } doReturn modal
     }
 

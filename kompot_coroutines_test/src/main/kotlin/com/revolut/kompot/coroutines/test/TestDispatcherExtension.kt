@@ -39,6 +39,6 @@ class TestDispatcherExtension : BeforeAllCallback, AfterAllCallback {
     @SuppressLint("VisibleForTests")
     override fun afterAll(context: ExtensionContext?) {
         Dispatchers.resetMain()
-        AppDispatchers.dispatcherOverride = { it() }
+        AppDispatchers.dispatcherOverride = { null }
     }
 }

@@ -16,13 +16,13 @@
 
 package com.revolut.kompot.navigable.components
 
-import android.app.Activity
 import android.view.LayoutInflater
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
 import com.revolut.kompot.navigable.cache.DefaultControllersCache
 import com.revolut.kompot.navigable.root.NavActionsScheduler
@@ -30,6 +30,7 @@ import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.navigable.vc.ViewControllerModel
 import com.revolut.kompot.navigable.vc.di.EmptyViewControllerComponent
+import com.revolut.kompot.navigable.vc.flow.BackStackEntry
 import com.revolut.kompot.navigable.vc.flow.FlowCoordinator
 import com.revolut.kompot.navigable.vc.flow.FlowModelBindingImpl
 import com.revolut.kompot.navigable.vc.flow.FlowViewController
@@ -37,6 +38,7 @@ import com.revolut.kompot.navigable.vc.flow.FlowViewModel
 import com.revolut.kompot.navigable.vc.flow.ModelBinding
 import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.ControllerContainerFrameLayout
+import org.junit.Assert
 
 internal class TestFlowViewController(
     internal val model: TestFlowViewControllerModel,
@@ -45,9 +47,10 @@ internal class TestFlowViewController(
     override val controllerModel = model
     override val modelBinding by lazy { ModelBinding(controllerModel) }
     override val component = EmptyViewControllerComponent
+    override val viewSavedStateEnabled: Boolean = true
 
     @Suppress("unchecked_cast")
-    private val modelBindingImpl get() = modelBinding as FlowModelBindingImpl<TestFlowViewControllerModel, TestFlowStep, IOData.EmptyOutput>
+    private val modelBindingImpl get() = modelBinding as FlowModelBindingImpl<*, TestFlowStep, IOData.EmptyOutput>
     internal val mainControllerManager: ControllerManager
         get() {
             val mainContainer = checkNotNull(modelBindingImpl.mainControllerContainer)
@@ -57,37 +60,46 @@ internal class TestFlowViewController(
             )
         }
 
+    private val testControllerManager: ControllerManager = mock {
+        on { controllersCache } doReturn DefaultControllersCache(20)
+    }
+
     internal val currentController get() = mainControllerManager.activeController
 
     init {
-        val parentControllerManager: ControllerManager = mock {
-            on { controllersCache } doReturn DefaultControllersCache(20)
-        }
         val rootFlow: RootFlow<*, *> = mock {
             on { rootDialogDisplayer } doReturn mock()
             on { navActionsScheduler } doReturn NavActionsScheduler()
         }
-        bind(parentControllerManager, parentController = rootFlow)
+        bind(testControllerManager, parentController = rootFlow)
 
         val mainControllerContainer = ControllerContainerFrameLayout(ApplicationProvider.getApplicationContext())
         modelBindingImpl.mainControllerContainer = mainControllerContainer
         mainControllerContainer.containerId = ControllerContainer.MAIN_CONTAINER_ID
 
-        val mockedActivity = mock<Activity> {
-            on { window } doReturn mock()
-        }
-        view = mock {
-            on { context } doReturn mockedActivity
+        view = TestControllerView(TestControllerActivity(), marker = 1).apply {
+            id = 22
         }
     }
 
     override fun createView(inflater: LayoutInflater): View = view
+
+    fun assertStateRendered(stateValue: Int) {
+        val currentFlowController = currentController
+        require(currentFlowController is TestViewController)
+        Assert.assertEquals(stateValue.toString(), currentFlowController.input)
+        Assert.assertEquals(stateValue, model.flowCoordinator.step.value)
+    }
 }
 
-internal class TestFlowViewControllerModel
-    : ViewControllerModel<IOData.EmptyOutput>(), FlowViewModel<TestFlowStep, IOData.EmptyOutput> {
+internal class TestFlowViewControllerModel(
+    initialStep: TestFlowStep = TestStep(1),
+    initialBackStack: List<BackStackEntry<TestFlowStep>> = emptyList(),
+) : ViewControllerModel<IOData.EmptyOutput>(), FlowViewModel<TestFlowStep, IOData.EmptyOutput> {
 
-    override val flowCoordinator = FlowCoordinator(TestStep(1)) { step ->
-        TestViewController(input = step.value.toString())
+    internal val initialisedControllers = mutableListOf<Controller>()
+
+    override val flowCoordinator = FlowCoordinator(initialStep, initialBackStack) { step ->
+        TestViewController(input = step.value.toString()).also { initialisedControllers.add(it) }
     }
 }

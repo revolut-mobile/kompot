@@ -1,6 +1,5 @@
 package com.revolut.kompot.sample.feature.chat.ui.screens.chat.di
 
-import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerModelExtension
 import com.revolut.kompot.navigable.vc.ViewController
 import com.revolut.kompot.navigable.vc.di.ViewControllerModule
@@ -36,7 +35,7 @@ abstract class ChatControllerModule : ViewControllerModule {
     @Module
     companion object {
         @[Provides JvmStatic ViewControllerScope]
-        fun provideMessageGenerator(@ViewControllerQualifier controller: ViewController<*>): MessageGenerator =
+        fun provideMessageGenerator(@ViewControllerQualifier controller : ViewController<*>): MessageGenerator =
             MessageGeneratorImpl(
                 contextProvider = { controller.activity }
             )

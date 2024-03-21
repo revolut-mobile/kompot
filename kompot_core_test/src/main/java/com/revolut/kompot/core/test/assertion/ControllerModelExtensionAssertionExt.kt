@@ -16,12 +16,18 @@
 
 package com.revolut.kompot.core.test.assertion
 
+import com.nhaarman.mockitokotlin2.doReturn
+import com.nhaarman.mockitokotlin2.whenever
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.NavigationDestination
+import com.revolut.kompot.dialog.DialogModel
+import com.revolut.kompot.dialog.DialogModelResult
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerModelExtension
 import com.revolut.kompot.navigable.flow.Flow
 import com.revolut.kompot.navigable.screen.Screen
 import com.revolut.kompot.navigable.vc.ViewController
+import kotlinx.coroutines.flow.flowOf
 
 fun ControllerModelExtension.assertModalScreen(assertion: (Screen<*>) -> Boolean) {
     ControllerModelAssertions.assertModalScreen(parentEventsDispatcher, assertion)
@@ -43,10 +49,30 @@ fun ControllerModelExtension.assertModalViewController(assertion: (ViewControlle
     ControllerModelAssertions.assertModalViewController(parentEventsDispatcher, assertion)
 }
 
+fun ControllerModelExtension.assertModalController(assertion: (Controller) -> Boolean) {
+    ControllerModelAssertions.assertModalController(parentEventsDispatcher, assertion)
+}
+
 fun ControllerModelExtension.assertDestination(destination: NavigationDestination) {
     ControllerModelAssertions.assertDestination(destination, parentEventsDispatcher)
 }
 
 fun ControllerModelExtension.assertNoNavigationEvent() {
     ControllerModelAssertions.assertNoNavigationEvent(parentEventsDispatcher)
+}
+
+fun ControllerModelExtension.assertDialog(model: DialogModel<*>) {
+    ControllerModelAssertions.assertDialog(parentDialogDisplayer, model)
+}
+
+fun ControllerModelExtension.mockDialogResult(forModel: DialogModel<*>, resultToReturn: DialogModelResult) {
+    whenever(parentDialogDisplayer.showDialog(forModel)) doReturn flowOf(resultToReturn)
+}
+
+fun ControllerModelExtension.assertDialogs(vararg models: DialogModel<*>) {
+    ControllerModelAssertions.assertDialogs(parentDialogDisplayer, *models)
+}
+
+fun ControllerModelExtension.assertNoDialog() {
+    ControllerModelAssertions.assertNoDialog(parentDialogDisplayer)
 }

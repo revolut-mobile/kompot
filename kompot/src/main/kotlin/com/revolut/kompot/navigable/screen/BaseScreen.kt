@@ -86,7 +86,7 @@ abstract class BaseScreen<
     }
 
     override fun createView(inflater: LayoutInflater): View {
-        val view = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
+        val view = getViewInflater(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
         view.applyEdgeToEdgeConfig()

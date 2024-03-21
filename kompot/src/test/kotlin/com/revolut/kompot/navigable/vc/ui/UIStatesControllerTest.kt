@@ -17,12 +17,20 @@
 package com.revolut.kompot.navigable.vc.ui
 
 import android.os.Bundle
+import com.nhaarman.mockitokotlin2.doReturn
+import com.nhaarman.mockitokotlin2.mock
+import com.revolut.kompot.coroutines.test.TestDispatcherExtension
 import com.revolut.kompot.navigable.components.TestDomainState
+import com.revolut.kompot.navigable.components.TestPersistentDomainState
+import com.revolut.kompot.navigable.components.TestUIPersistentStatesViewControllerModel
 import com.revolut.kompot.navigable.components.TestUIState
 import com.revolut.kompot.navigable.components.TestUIStatesViewController
 import com.revolut.kompot.navigable.components.TestUIStatesViewControllerModel
+import com.revolut.kompot.navigable.hooks.HooksProvider
+import com.revolut.kompot.navigable.hooks.PersistentModelStateStorageHook
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.jupiter.api.Assertions
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -88,7 +96,67 @@ internal class UIStatesControllerTest {
         )
     }
 
-    private fun TestUIStatesViewController.assertRenderedStates(states: List<TestUIState>) {
+    @Test
+    fun `GIVEN mapStateInBackground is false THEN all emissions on default`() = com.revolut.kompot.coroutines.test.dispatchBlockingTest {
+        val model = TestUIStatesViewControllerModel(mapStatesInBackground = false)
+        val screen = TestUIStatesViewController(model)
+        screen.onCreate()
+        screen.onAttach()
+        model.state.update { copy(value = 2) }
+        val mappingThreads = model.mapper.mappingThreads
+        Assertions.assertTrue(mappingThreads[0] == mappingThreads[1])
+    }
+
+    @Test
+    fun `GIVEN stateReducer for the persistent state THEN reduced state will be emitted`() = com.revolut.kompot.coroutines.test.dispatchBlockingTest {
+
+        val storage: PersistentModelStateStorage = mock {
+            on { get<TestPersistentDomainState>(PersistentModelStateKey(TestUIPersistentStatesViewControllerModel.STORAGE_KEY)) } doReturn TestPersistentDomainState(2)
+        }
+        val hookProvider: HooksProvider = mock {
+            on { getHook(PersistentModelStateStorageHook.Key) } doReturn PersistentModelStateStorageHook(storage)
+        }
+
+        val model = TestUIPersistentStatesViewControllerModel(
+            initialState = TestPersistentDomainState(1),
+            stateReducer = { _, restoredState ->
+                restoredState.copy(value = 3)
+            }
+        )
+        val screen = TestUIStatesViewController(
+            model,
+            hookProvider
+        )
+        screen.onCreate()
+        screen.onAttach()
+        screen.assertRenderedStates(
+            listOf(
+                TestUIState(3),
+            )
+        )
+    }
+
+    @Test
+    fun `GIVEN mapStateInBackground is true THEN first state emission mapped on default and others on worker thread`() {
+        val dispatcherExtension = TestDispatcherExtension()
+        dispatcherExtension.beforeAll(null)
+        com.revolut.kompot.coroutines.test.dispatchBlockingTest {
+            val model = TestUIStatesViewControllerModel(mapStatesInBackground = true)
+            val screen = TestUIStatesViewController(model)
+            screen.onCreate()
+            screen.onAttach()
+            model.state.update { copy(value = 2) }
+            model.state.update { copy(value = 3) }
+            val mappingThreads = model.mapper.mappingThreads
+            //same thread
+            Assertions.assertTrue(mappingThreads[0] == mappingThreads[1])
+            //different thread after onAttach
+            Assertions.assertTrue(mappingThreads[0] != mappingThreads[2])
+        }
+        dispatcherExtension.afterAll(null)
+    }
+
+    private fun TestUIStatesViewController<*>.assertRenderedStates(states: List<TestUIState>) {
         assertEquals(states, renderedStates)
     }
 }

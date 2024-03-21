@@ -22,7 +22,7 @@ import com.revolut.recyclerkit.delegates.ListItem
 interface States {
     interface Domain
 
-    interface RetainedDomain: Parcelable
+    interface PersistentDomain: Domain, Parcelable
 
     interface UI {
         fun calculatePayload(oldState: UI): UIPayload? = null
@@ -42,7 +42,7 @@ interface States {
         override val items: List<ListItem> = emptyList()
     }
 
-    interface Mapper<IN : Domain, OUT : UI> {
+    fun interface Mapper<IN : Domain, OUT : UI> {
         fun mapState(domainState: IN): OUT
     }
 }

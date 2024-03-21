@@ -22,6 +22,7 @@ import com.nhaarman.mockitokotlin2.mock
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.ControllerManager
 import com.revolut.kompot.navigable.cache.DefaultControllersCache
+import com.revolut.kompot.navigable.hooks.HooksProvider
 import com.revolut.kompot.navigable.root.NavActionsScheduler
 import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.navigable.vc.ViewController
@@ -29,14 +30,18 @@ import com.revolut.kompot.navigable.vc.ViewControllerModel
 import com.revolut.kompot.navigable.vc.di.EmptyViewControllerComponent
 import com.revolut.kompot.navigable.vc.ui.ModelBinding
 import com.revolut.kompot.navigable.vc.ui.ModelState
+import com.revolut.kompot.navigable.vc.ui.PersistentModelState
+import com.revolut.kompot.navigable.vc.ui.PersistentModelStateKey
 import com.revolut.kompot.navigable.vc.ui.SaveStateDelegate
 import com.revolut.kompot.navigable.vc.ui.States
 import com.revolut.kompot.navigable.vc.ui.UIStatesController
 import com.revolut.kompot.navigable.vc.ui.UIStatesModel
 import kotlinx.parcelize.Parcelize
+import java.util.concurrent.CopyOnWriteArrayList
 
-internal class TestUIStatesViewController(
-    model: TestUIStatesViewControllerModel
+internal class TestUIStatesViewController<Domain: States.Domain>(
+    model: UIStatesModel<Domain, TestUIState, IOData.EmptyOutput>,
+    private val hooksProviderValue: HooksProvider? = null
 ) : ViewController<IOData.EmptyOutput>(), UIStatesController<TestUIState> {
 
     internal val renderedStates = mutableListOf<TestUIState>()
@@ -53,6 +58,7 @@ internal class TestUIStatesViewController(
     init {
         val parentControllerManager: ControllerManager = mock {
             on { controllersCache } doReturn DefaultControllersCache(20)
+            on { hooksProvider } doReturn hooksProviderValue
         }
         val rootFlow: RootFlow<*, *> = mock {
             on { rootDialogDisplayer } doReturn mock()
@@ -70,15 +76,19 @@ internal class TestUIStatesViewController(
 
 }
 
-internal class TestUIStatesViewControllerModel
+internal class TestUIStatesViewControllerModel(
+    val mapper: TestStateMapper = TestStateMapper(),
+    mapStatesInBackground: Boolean = false,
+)
     : ViewControllerModel<IOData.EmptyOutput>(), UIStatesModel<TestDomainState, TestUIState, IOData.EmptyOutput> {
 
     override val state = ModelState(
         initialState = TestDomainState(
             value = 1,
         ),
-        stateMapper = TestStateMapper(),
-        saveStateDelegate = ModelSaveStateDelegate()
+        stateMapper = mapper,
+        saveStateDelegate = ModelSaveStateDelegate(),
+        mapStatesInBackground = mapStatesInBackground,
     )
 
     private class ModelSaveStateDelegate : SaveStateDelegate<TestDomainState, TestRetainedDomainState>() {
@@ -90,12 +100,48 @@ internal class TestUIStatesViewControllerModel
     }
 }
 
+internal class TestUIPersistentStatesViewControllerModel(
+    val initialState: TestPersistentDomainState = TestPersistentDomainState(1),
+    val stateReducer: (TestPersistentDomainState, TestPersistentDomainState) -> TestPersistentDomainState
+)
+    : ViewControllerModel<IOData.EmptyOutput>(), UIStatesModel<TestPersistentDomainState, TestUIState, IOData.EmptyOutput> {
+
+    override val state = PersistentModelState(
+        key = PersistentModelStateKey(STORAGE_KEY),
+        initialState = initialState,
+        stateMapper = TestPersistentStateMapper(),
+        restoredStateReducer = stateReducer,
+    )
+
+    companion object {
+        const val STORAGE_KEY = "key"
+    }
+}
+
 internal class TestStateMapper : States.Mapper<TestDomainState, TestUIState> {
-    override fun mapState(domainState: TestDomainState) = TestUIState(domainState.value)
+
+    val mappingThreads = CopyOnWriteArrayList<String>()
+
+    override fun mapState(domainState: TestDomainState): TestUIState {
+        mappingThreads.add(Thread.currentThread().name)
+        return TestUIState(domainState.value)
+    }
+}
+
+internal class TestPersistentStateMapper : States.Mapper<TestPersistentDomainState, TestUIState> {
+
+    val mappingThreads = CopyOnWriteArrayList<String>()
+
+    override fun mapState(domainState: TestPersistentDomainState): TestUIState {
+        mappingThreads.add(Thread.currentThread().name)
+        return TestUIState(domainState.value)
+    }
 }
 
 data class TestDomainState(val value: Int) : States.Domain
+@Parcelize
+data class TestPersistentDomainState(val value: Int) : States.PersistentDomain
 data class TestUIState(val value: Int) : States.UI
 
 @Parcelize
-data class TestRetainedDomainState(val value: Int) : States.RetainedDomain
+data class TestRetainedDomainState(val value: Int) : States.PersistentDomain

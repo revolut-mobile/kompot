@@ -17,6 +17,8 @@
 package com.revolut.kompot.navigable
 
 import android.os.Parcelable
+import com.revolut.kompot.ExperimentalBottomDialogStyle
+import com.revolut.kompot.common.ModalDestination
 import kotlinx.parcelize.Parcelize
 
 sealed interface TransitionAnimation : Parcelable {
@@ -35,16 +37,47 @@ sealed interface TransitionAnimation : Parcelable {
     @Parcelize
     object FADE : TransitionAnimation
 
-    @Parcelize
-    object MODAL_FADE : TransitionAnimation
-
-    @Parcelize
-    object MODAL_SLIDE : TransitionAnimation
-
-    @Parcelize
-    object BOTTOM_DIALOG_SLIDE : TransitionAnimation
-
     interface Custom : TransitionAnimation {
         val providerId: Int
     }
 }
+
+internal sealed interface InternalTransitionAnimation : TransitionAnimation
+
+internal sealed interface ModalTransitionAnimation : InternalTransitionAnimation {
+
+    val style: ModalDestination.Style
+
+    @Parcelize
+    data class ModalFullscreenFade(
+        val showImmediately: Boolean = false,
+        override val style: ModalDestination.Style
+    ) : ModalTransitionAnimation
+
+    @Parcelize
+    data class ModalFullscreenSlideFromBottom(val showImmediately: Boolean = false) : ModalTransitionAnimation {
+        override val style: ModalDestination.Style get() = ModalDestination.Style.FULLSCREEN_SLIDE_FROM_BOTTOM
+    }
+
+    @Parcelize
+    data class ModalPopup(val showImmediately: Boolean = false) : ModalTransitionAnimation {
+        override val style: ModalDestination.Style get() = ModalDestination.Style.POPUP
+    }
+
+    @Parcelize
+    @OptIn(ExperimentalBottomDialogStyle::class)
+    data class BottomDialog(val showImmediately: Boolean = false) : ModalTransitionAnimation {
+        override val style: ModalDestination.Style get() = ModalDestination.Style.BOTTOM_DIALOG
+    }
+}
+
+internal fun ModalDestination.Style.toModalTransitionAnimation(showImmediately: Boolean) =
+    when (this) {
+        ModalDestination.Style.POPUP -> ModalTransitionAnimation.ModalPopup(showImmediately)
+        ModalDestination.Style.FULLSCREEN_FADE -> ModalTransitionAnimation.ModalFullscreenFade(showImmediately, this)
+        ModalDestination.Style.FULLSCREEN_SLIDE_FROM_BOTTOM -> ModalTransitionAnimation.ModalFullscreenSlideFromBottom(showImmediately)
+        ModalDestination.Style.FULLSCREEN_IMMEDIATE -> ModalTransitionAnimation.ModalFullscreenFade(showImmediately = true, this)
+        ModalDestination.Style.BOTTOM_DIALOG -> ModalTransitionAnimation.BottomDialog(showImmediately)
+    }
+
+internal fun TransitionAnimation.extractModalStyle(): ModalDestination.Style? = (this as? ModalTransitionAnimation)?.style

@@ -27,11 +27,9 @@ class MainFlowModel @Inject constructor() : ViewControllerModel<IOData.EmptyOutp
         initialState = DomainState(CHATS_TAB_ID)
     )
     override val flowCoordinator = FlowCoordinator(Step.ChatList) { step ->
-        dependentController(MainFlowContract.mainFlowKey, step) {
-            when (step) {
-                Step.ChatList -> ChatListViewController()
-                Step.ContactList -> ContactListViewController()
-            }
+        when (step) {
+            Step.ChatList -> ChatListViewController()
+            Step.ContactList -> ContactListViewController()
         }
     }
 

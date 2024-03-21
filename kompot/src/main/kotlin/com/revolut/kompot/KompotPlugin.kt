@@ -22,11 +22,12 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.util.concurrent.CopyOnWriteArrayList
 
 object KompotPlugin {
 
     internal val controllerShownSharedFlow = MutableSharedFlow<Controller>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    internal val controllerLifecycleCallbacks = mutableListOf<ControllerLifecycleCallbacks>()
+    internal val controllerLifecycleCallbacks = CopyOnWriteArrayList<ControllerLifecycleCallbacks>()
 
     @Deprecated("Use registerControllerLifecycleCallbacks with ControllerLifecycleCallbacks.onControllerAttached")
     fun controllerShowingStream(): Flow<Controller> = controllerShownSharedFlow.distinctUntilChanged()

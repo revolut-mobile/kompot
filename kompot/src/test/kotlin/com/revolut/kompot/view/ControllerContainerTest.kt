@@ -17,6 +17,7 @@
 package com.revolut.kompot.view
 
 import android.content.Context
+import android.os.Build
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -29,7 +30,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@Config(manifest = Config.NONE, sdk = [Build.VERSION_CODES.N])
 internal class ControllerContainerTest {
 
     @Test

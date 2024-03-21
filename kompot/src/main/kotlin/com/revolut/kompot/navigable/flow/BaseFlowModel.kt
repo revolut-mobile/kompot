@@ -26,15 +26,13 @@ import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.common.NavigationEvent
 import com.revolut.kompot.common.NavigationEventHandledResult
 import com.revolut.kompot.navigable.Controller
-import com.revolut.kompot.navigable.ControllerKey
 import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.binder.ModelBinder
 import com.revolut.kompot.navigable.binder.StatefulModelBinder
-import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.screen.BaseScreen
 import com.revolut.kompot.navigable.vc.ViewController
-import java.util.*
+import com.revolut.kompot.utils.PostponedRestorationTriggeredEvent
 
 abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData.Output> : ControllerModel(), FlowModel<STEP, OUTPUT> {
     internal lateinit var stateWrapper: FlowStateWrapper<STATE, STEP>
@@ -228,35 +226,6 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         return controller
     }
 
-    protected fun dependentController(
-        flowKey: ControllerKey,
-        step: FlowStep,
-        controllerProvider: () -> Controller
-    ): Controller =
-        dependentController(
-            flowKey = flowKey,
-            controllerKey = ControllerKey(step.javaClass.canonicalName ?: step.javaClass.simpleName),
-            controllerProvider = controllerProvider,
-        )
-
-    protected fun dependentController(
-        flowKey: ControllerKey,
-        controllerKey: ControllerKey,
-        controllerProvider: () -> Controller
-    ): Controller {
-        val cachedController = controllersCache.getController(controllerKey)
-        return cachedController ?: controllerProvider().apply {
-            cacheStrategy = ControllerCacheStrategy.DependentOn(flowKey)
-            keyInitialization = { controllerKey }
-        }
-    }
-
-    protected fun dependentController(
-        flowKey: String,
-        step: FlowStep,
-        controllerProvider: () -> Controller
-    ): Controller = dependentController(ControllerKey(flowKey), step, controllerProvider)
-
     private fun prepareBackStack(initialBackStack: List<Pair<STEP, TransitionAnimation>>) {
         _backStack.clear()
         initialBackStack.forEach { (step, transition) ->
@@ -336,7 +305,12 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         return true
     }
 
-    final override fun setNextState(step: STEP, animation: TransitionAnimation, addCurrentStepToBackStack: Boolean, childFlowModel: FlowModel<*, *>?) {
+    final override fun setNextState(
+        step: STEP,
+        animation: TransitionAnimation,
+        addCurrentStepToBackStack: Boolean,
+        childFlowModel: FlowModel<*, *>?
+    ) {
         if (!addCurrentStepToBackStack) {
             invalidateCache(stateWrapper, destroy = false)
         } else {
@@ -423,6 +397,7 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         navigationCommandsBinder.notify(restorationCommand)
 
         this.restorationPolicy = null
+        eventsDispatcher.handleEvent(PostponedRestorationTriggeredEvent())
         return true
     }
 

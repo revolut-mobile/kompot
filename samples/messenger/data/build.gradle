@@ -13,5 +13,5 @@ addDependencies(
 )
 
 android {
-        namespace "com.revolut.kompot.sample.data"
+    namespace "com.revolut.kompot.sample.data"
 }

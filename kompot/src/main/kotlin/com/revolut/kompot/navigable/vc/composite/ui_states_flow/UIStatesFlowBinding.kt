@@ -43,7 +43,7 @@ interface UIStatesFlowModel<D : States.Domain, UI : States.UI, Step : FlowStep, 
     : FlowViewModel<Step, Out>, UIStatesModel<D, UI, Out>
 
 internal class UIStatesFlowModelBindingImpl<D : States.Domain, UI : States.UI, S : FlowStep, Out : IOData.Output>(
-    containerId: Int = R.id.container,
+    containerId: Int,
     controller: UIStatesFlowController<UI>,
     model: UIStatesFlowModel<D, UI, S, Out>,
     debounceStreamProvider: DebounceStreamProvider?,
@@ -62,17 +62,18 @@ internal class UIStatesFlowModelBindingImpl<D : States.Domain, UI : States.UI, S
         ),
     )
 ) {
-    override val defaultFlowLayoutId: Int get() = flowModelBinding.defaultFlowLayoutId
     override val hasBackStack: Boolean get() = flowModelBinding.hasBackStack
 }
 
 @Suppress("FunctionName")
 fun <D : States.Domain, UI : States.UI, S : FlowStep, Out : IOData.Output> UIStatesFlowController<UI>.ModelBinding(
     model: UIStatesFlowModel<D, UI, S, Out>,
+    containerId: Int = R.id.container,
     debounceStreamProvider: DebounceStreamProvider? = null,
 ): UIStatesFlowBinding<UI> {
     return UIStatesFlowModelBindingImpl(
         controller = this,
+        containerId = containerId,
         model = model,
         debounceStreamProvider = debounceStreamProvider,
     )

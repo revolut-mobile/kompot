@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable.saved_state
 
+import android.os.Build
 import android.os.Bundle
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
@@ -43,6 +44,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE, sdk = [Build.VERSION_CODES.N])
 internal class FlowSavedStateTest {
 
     private val parentControllerManager: ControllerManager = mock {

@@ -24,12 +24,11 @@ import com.revolut.kompot.navigable.vc.binding.ModelBinding
 import com.revolut.kompot.navigable.vc.binding.ViewControllerModelApi
 
 interface FlowModelBinding : ModelBinding {
-    val defaultFlowLayoutId: Int
     val hasBackStack: Boolean
 }
 
 interface FlowViewController : ViewControllerApi, ParentFlow {
-    override val layoutId: Int get() = modelBinding.defaultFlowLayoutId
+    override val layoutId: Int get() = environment.defaultControllerContainer
     override val modelBinding: FlowModelBinding
     override val hasBackStack: Boolean get() = modelBinding.hasBackStack
 }

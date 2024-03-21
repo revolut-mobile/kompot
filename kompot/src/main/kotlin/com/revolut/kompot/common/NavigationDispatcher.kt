@@ -53,31 +53,33 @@ abstract class InternalDestination<INPUT : IOData.Input>(
 sealed class ModalDestination : NavigationDestination {
     data class ExplicitScreen<T : IOData.Output>(
         val screen: Screen<T>,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
         val onResult: ((T) -> Unit)? = null
     ) : ModalDestination()
 
     data class ExplicitFlow<T : IOData.Output>(
         val flow: Flow<T>,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
         val onResult: ((T) -> Unit)? = null
     ) : ModalDestination()
 
     @OptIn(ExperimentalKompotApi::class)
     data class ExplicitScrollerFlow<T : IOData.Output>(
         val flow: ScrollerFlow<T>,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
         val onResult: ((T) -> Unit)? = null
     ) : ModalDestination()
 
     data class CallbackController(
         val controller: Controller,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
     ) : ModalDestination()
 
     enum class Style {
-        FULLSCREEN,
+        FULLSCREEN_FADE,
+        FULLSCREEN_IMMEDIATE,
         POPUP,
+        FULLSCREEN_SLIDE_FROM_BOTTOM,
 
         @ExperimentalBottomDialogStyle
         BOTTOM_DIALOG,

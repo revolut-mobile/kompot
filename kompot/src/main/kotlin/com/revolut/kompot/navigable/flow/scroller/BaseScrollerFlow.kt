@@ -130,7 +130,7 @@ abstract class BaseScrollerFlow<STEP : ScrollerFlowStep, INPUT_DATA : IOData.Inp
     private lateinit var recyclerView: RecyclerView
 
     override fun createView(inflater: LayoutInflater): View {
-        val controllerContainer = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
+        val controllerContainer = getViewInflater(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
         controllerContainer.applyEdgeToEdgeConfig()

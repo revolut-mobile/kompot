@@ -19,7 +19,6 @@ package com.revolut.kompot.navigable.single_task
 import com.revolut.kompot.advanceTimeImmediatelyBy
 import com.revolut.kompot.dispatchBlockingTest
 import com.revolut.kompot.navigable.ControllerModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -35,7 +34,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class SingleTaskTest {
 
     private val testControllerModel = TestControllerModel()

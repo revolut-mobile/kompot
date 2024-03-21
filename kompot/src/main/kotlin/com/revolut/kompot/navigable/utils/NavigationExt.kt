@@ -42,7 +42,7 @@ internal fun NavigationDestination.navigate(eventsDispatcher: EventsDispatcher) 
 
 internal fun <T : IOData.Output> Screen<T>.showModal(
     eventsDispatcher: EventsDispatcher,
-    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     onResult: ((T) -> Unit)? = null
 ) =
     eventsDispatcher.handleNavigationEvent(
@@ -55,7 +55,7 @@ internal fun <T : IOData.Output> Screen<T>.showModal(
 
 internal fun <T : IOData.Output> Flow<T>.showModal(
     eventsDispatcher: EventsDispatcher,
-    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     onResult: ((T) -> Unit)? = null
 ) =
     eventsDispatcher.handleNavigationEvent(
@@ -69,7 +69,7 @@ internal fun <T : IOData.Output> Flow<T>.showModal(
 @OptIn(ExperimentalKompotApi::class)
 internal fun <T : IOData.Output> ScrollerFlow<T>.showModal(
     eventsDispatcher: EventsDispatcher,
-    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     onResult: ((T) -> Unit)? = null
 ) =
     eventsDispatcher.handleNavigationEvent(
@@ -82,7 +82,7 @@ internal fun <T : IOData.Output> ScrollerFlow<T>.showModal(
 
 internal fun <T : IOData.Output> ViewController<T>.showModal(
     eventsDispatcher: EventsDispatcher,
-    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+    style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
     onResult: ((T) -> Unit)? = null
 ) {
     onResult?.let(this::withResult)

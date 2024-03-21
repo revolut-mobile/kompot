@@ -120,7 +120,7 @@ internal class ScrollerFlowControllersAdapter<T : ScrollerItem>(
             controllerViewHolder = DefaultControllerViewHolder(itemView),
             modal = false,
             controllersCache = controllersCache,
-            defaultFlowLayout = null,
+            defaultControllerContainer = null,
             onTransitionCanceled = null,
         )
     }

@@ -16,7 +16,10 @@
 
 package com.revolut.kompot.navigable.vc.modal
 
+import com.revolut.kompot.common.Event
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.common.ModalDestination
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.vc.ViewControllerApi
 import com.revolut.kompot.navigable.vc.binding.ViewControllerModelApi
@@ -28,3 +31,9 @@ interface ModalHostController : ViewControllerApi {
 interface ModalHostViewModel<S : FlowStep, Out : IOData.Output> : ViewControllerModelApi<Out> {
     val modalCoordinator: ModalCoordinator<S, Out>
 }
+
+internal data class ModalRestorationRequest(
+    val index: Int,
+    val modalController: Controller,
+    val style: ModalDestination.Style,
+) : Event()

@@ -692,7 +692,7 @@ internal class ControllerModelTest {
         }
 
         fun <T : IOData.Output> ViewController<T>.showModalTest(
-            style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN,
+            style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
             onResult: ((T) -> Unit)? = null
         ) = showModal(eventsDispatcher, style, onResult)
 

@@ -17,6 +17,7 @@
 package com.revolut.kompot.navigable.root
 
 import android.view.View
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.ModalDestination
@@ -27,6 +28,7 @@ import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.flow.BaseFlow
 import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.toModalTransitionAnimation
 import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.ControllerContainerFrameLayout
 
@@ -47,6 +49,10 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
         rootDialogDisplayer.onCreate()
 
         (flowModel as BaseRootFlowModel<*, *>).rootNavigator = RootNavigator(this)
+
+        view.doOnLayout {
+            (flowModel as BaseRootFlowModel<*, *>).onControllersFirstLayout()
+        }
     }
 
     override fun onDestroyFlowView() {
@@ -68,33 +74,26 @@ abstract class RootFlow<STEP : FlowStep, INPUT_DATA : IOData.Input>(inputData: I
         rootDialogDisplayer.onDetach()
     }
 
-    internal fun open(controller: Controller, style: ModalDestination.Style, parentController: Controller?) {
-        containerForModalNavigation.containerId = ControllerContainer.MODAL_CONTAINER_ID
-        containerForModalNavigation.isVisible = true
-        getFirstAvailableModalManager().show(
-            controller = controller,
-            animation = when (style) {
-                ModalDestination.Style.POPUP -> {
-                    if (getModalAnimatable() != null)
-                        TransitionAnimation.MODAL_SLIDE
-                    else
-                        TransitionAnimation.FADE
-                }
-                ModalDestination.Style.FULLSCREEN ->
-                    if (getModalAnimatable() != null)
-                        TransitionAnimation.MODAL_FADE
-                    else
-                        TransitionAnimation.FADE
-
-                ModalDestination.Style.BOTTOM_DIALOG ->
-                    if (getModalAnimatable() != null)
-                        TransitionAnimation.BOTTOM_DIALOG_SLIDE
-                    else
-                        TransitionAnimation.FADE
-            },
-            backward = false,
-            parentController = parentController ?: this,
-        )
+    internal fun open(controller: Controller, style: ModalDestination.Style, parentController: Controller?, showImmediately: Boolean) {
+        val openModalAction = {
+            containerForModalNavigation.containerId = ControllerContainer.MODAL_CONTAINER_ID
+            containerForModalNavigation.isVisible = true
+            getFirstAvailableModalManager().show(
+                controller = controller,
+                animation = if (getModalAnimatable() != null) {
+                    style.toModalTransitionAnimation(showImmediately)
+                } else {
+                    TransitionAnimation.FADE
+                },
+                backward = false,
+                parentController = parentController ?: this,
+            )
+        }
+        if (showImmediately || style == ModalDestination.Style.FULLSCREEN_IMMEDIATE) {
+            openModalAction()
+        } else {
+            navActionsScheduler.schedule(key.value, openModalAction)
+        }
     }
 
     override fun onChildControllerAttached(controller: Controller, controllerManager: ControllerManager) {

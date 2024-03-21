@@ -16,6 +16,7 @@
 
 package com.revolut.kompot.navigable
 
+import android.os.Build
 import com.revolut.kompot.navigable.components.TestFlow
 import com.revolut.kompot.navigable.components.TestFlowModel
 import com.revolut.kompot.navigable.components.TestStep
@@ -37,7 +38,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@Config(manifest = Config.NONE, sdk = [Build.VERSION_CODES.N])
 class NavigationQueueTest {
 
     private val testDispatcher = StandardTestDispatcher()

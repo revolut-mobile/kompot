@@ -16,52 +16,35 @@
 
 package com.revolut.kompot.navigable.vc.flow
 
+import android.os.Build
 import android.os.Bundle
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.components.TestFlowViewController
 import com.revolut.kompot.navigable.components.TestFlowViewControllerModel
 import com.revolut.kompot.navigable.components.TestStep
-import com.revolut.kompot.navigable.components.TestViewController
-import com.revolut.kompot.navigable.utils.Preconditions
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Before
+import com.revolut.kompot.utils.StubMainThreadRule
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@Config(manifest = Config.NONE, sdk = [Build.VERSION_CODES.N])
 internal class FlowViewControllerNavigationTest {
+
+    @[Rule JvmField]
+    val stubMainThreadRule = StubMainThreadRule()
 
     private val flowModel = TestFlowViewControllerModel()
     private val flow = TestFlowViewController(flowModel)
-
-    @Before
-    fun setUp() {
-        Preconditions.mainThreadRequirementEnabled = false
-        Dispatchers.setMain(UnconfinedTestDispatcher())
-    }
-
-    @After
-    fun tearDown() {
-        Preconditions.mainThreadRequirementEnabled = true
-        Dispatchers.resetMain()
-    }
 
     @Test
     fun `GIVEN initial step WHEN attached THEN render initial step`() {
         flow.onCreate()
         flow.onAttach()
 
-        flow.assertStateRendered(1)
+        flow.assertStateRendered(stateValue = 1)
     }
 
     @Test
@@ -76,11 +59,11 @@ internal class FlowViewControllerNavigationTest {
             executeImmediately = false,
         )
 
-        flow.assertStateRendered(2)
+        flow.assertStateRendered(stateValue = 2)
     }
 
     @Test
-    fun `GIVEN initial step WHEN navigate backward THEN return to previous step`() {
+    fun `WHEN navigate backward THEN return to previous step`() {
         flow.onCreate()
         flow.onAttach()
 
@@ -92,7 +75,7 @@ internal class FlowViewControllerNavigationTest {
         )
         flow.handleBack()
 
-        flow.assertStateRendered(1)
+        flow.assertStateRendered(stateValue = 1)
     }
 
     @Test
@@ -114,7 +97,7 @@ internal class FlowViewControllerNavigationTest {
         )
         flow.handleBack()
 
-        flow.assertStateRendered(1)
+        flow.assertStateRendered(stateValue = 1)
     }
 
     @Test
@@ -140,7 +123,7 @@ internal class FlowViewControllerNavigationTest {
         restoredFlow.onCreate()
         restoredFlow.onAttach()
 
-        restoredFlow.assertStateRendered(2)
+        restoredFlow.assertStateRendered(stateValue = 2)
     }
 
     @Test
@@ -161,13 +144,26 @@ internal class FlowViewControllerNavigationTest {
             backward = false,
         )
 
-        flow.assertStateRendered(1)
+        flow.assertStateRendered(stateValue = 1)
     }
 
-    private fun TestFlowViewController.assertStateRendered(index: Int) {
-        val currentFlowController = currentController
-        require(currentFlowController is TestViewController)
-        assertEquals(index.toString(), currentFlowController.input)
-        assertEquals(TestStep(index), model.flowCoordinator.step)
+    @Test
+    fun `GIVEN initial backstack WHEN navigate backward THEN return to predefined backstack steps`() {
+        val flowModel = TestFlowViewControllerModel(
+            initialBackStack = listOf(
+                BackStackEntry(TestStep(41), TransitionAnimation.NONE),
+                BackStackEntry(TestStep(42), TransitionAnimation.NONE),
+            )
+        )
+        val flow = TestFlowViewController(flowModel)
+
+        flow.onCreate()
+        flow.onAttach()
+        flow.assertStateRendered(stateValue = 1)
+
+        flow.handleBack()
+        flow.assertStateRendered(stateValue = 42)
+        flow.handleBack()
+        flow.assertStateRendered(stateValue = 41)
     }
 }

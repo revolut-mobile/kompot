@@ -20,9 +20,11 @@ import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.di.flow.ControllerComponent
 import com.revolut.kompot.navigable.LayoutOwner
 import com.revolut.kompot.navigable.SavedStateOwner
+import com.revolut.kompot.navigable.utils.ControllerEnvironment
 import com.revolut.kompot.navigable.vc.binding.ModelBinding
 
 interface ViewControllerApi : EventsDispatcher, LayoutOwner, SavedStateOwner {
+    val environment: ControllerEnvironment
     val modelBinding: ModelBinding
     val component: ControllerComponent
 }

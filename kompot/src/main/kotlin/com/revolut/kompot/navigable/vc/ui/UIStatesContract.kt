@@ -17,11 +17,18 @@
 package com.revolut.kompot.navigable.vc.ui
 
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.common.LifecycleEvent
 import com.revolut.kompot.navigable.vc.ViewControllerApi
 import com.revolut.kompot.navigable.vc.binding.ViewControllerModelApi
 import com.revolut.kompot.navigable.vc.common.StateHolder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.atomic.AtomicBoolean
 
 interface UIStatesController<UI : States.UI> : ViewControllerApi {
     fun render(uiState: UI, payload: Any?)
@@ -36,10 +43,36 @@ interface UIStatesModel<Domain : States.Domain, UI : States.UI, Out : IOData.Out
 abstract class ModelState<Domain : States.Domain, UI : States.UI>(
     initialState: Domain,
     private val stateMapper: States.Mapper<Domain, UI>,
+    private val mapStateInBackground: Boolean,
 ) : StateHolder<Domain>(initialState) {
 
+    private val firstEmmitHappened = AtomicBoolean(false)
+
+    @OptIn(FlowPreview::class)
     fun uiStates(): Flow<UI> =
-        statesStream().map(stateMapper::mapState)
+        if (mapStateInBackground) {
+            statesStream()
+                .flatMapConcat {
+                    flowOf(it)
+                        .map(stateMapper::mapState)
+                        .run {
+                            if (firstEmmitHappened.getAndSet(true)) {
+                                flowOn(Dispatchers.Default)
+                            } else {
+                                this
+                            }
+                        }
+                }
+        } else {
+            statesStream()
+                .map(stateMapper::mapState)
+        }
 
     internal fun domainStateStream(): Flow<Domain> = statesStream()
+
+    internal fun onLifecycleEvent(event: LifecycleEvent) {
+        if (event == LifecycleEvent.SHOWN) {
+            firstEmmitHappened.set(false)
+        }
+    }
 }
