@@ -31,8 +31,9 @@ import com.revolut.kompot.navigable.vc.ui.DebounceStreamProvider
 import com.revolut.kompot.navigable.vc.ui.States
 import com.revolut.kompot.navigable.vc.ui.UIStateModelBindingImpl
 import com.revolut.kompot.navigable.vc.ui.UIStatesModelBinding
+import com.revolut.recyclerkit.delegates.DelegatesManager
+import com.revolut.recyclerkit.delegates.DiffAdapter
 import com.revolut.recyclerkit.delegates.RecyclerViewDelegate
-import com.revolut.rxdiffadapter.RxDiffAdapter
 
 internal typealias LayoutManagerProvider = (Context) -> LayoutManager
 
@@ -48,7 +49,7 @@ internal class UIListStatesModelBindingImpl<M : UIListStatesModel<D, UI, Out>, D
     private val recyclerViewId: Int,
     private val layoutManagerProvider: LayoutManagerProvider,
     private val delegates: List<RecyclerViewDelegate<*, *>>,
-    private val listAdapter: RxDiffAdapter,
+    private val listAdapter: DiffAdapter,
     private val uiStatesModelBinding: UIStateModelBindingImpl<M, D, UI, Out> = UIStateModelBindingImpl(
         controller,
         model,
@@ -94,7 +95,7 @@ fun <M : UIListStatesModel<D, UI, Out>, D : States.Domain, UI : States.UIList, O
     delegates: List<RecyclerViewDelegate<*, *>>,
     recyclerViewId: Int = R.id.recyclerView,
     layoutManagerProvider: LayoutManagerProvider = { DefaultLayoutManager(this) },
-    listAdapter: RxDiffAdapter = DefaultAdapter(),
+    listAdapter: DiffAdapter = DefaultAdapter(),
     debounceStreamProvider: DebounceStreamProvider? = null,
 ): UIListStatesModelBinding<UI> {
     return UIListStatesModelBindingImpl(
@@ -115,10 +116,9 @@ internal fun DefaultLayoutManager(controller: ViewControllerApi): LayoutManager 
     }
 
 @Suppress("FunctionName")
-internal fun DefaultAdapter(): RxDiffAdapter =
-    RxDiffAdapter(
-        delegates = emptyList(),
+internal fun DefaultAdapter(): DiffAdapter =
+    DiffAdapter(
+        delegatesManager = DelegatesManager(emptyList()),
         async = false,
         autoScrollToTop = false,
-        detectMoves = true
     )

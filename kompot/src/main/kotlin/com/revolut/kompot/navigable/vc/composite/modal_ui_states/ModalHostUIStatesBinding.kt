@@ -39,8 +39,8 @@ import com.revolut.kompot.navigable.vc.ui.list.UIListStatesController
 import com.revolut.kompot.navigable.vc.ui.list.UIListStatesModel
 import com.revolut.kompot.navigable.vc.ui.list.UIListStatesModelBinding
 import com.revolut.kompot.navigable.vc.ui.list.UIListStatesModelBindingImpl
+import com.revolut.recyclerkit.delegates.DiffAdapter
 import com.revolut.recyclerkit.delegates.RecyclerViewDelegate
-import com.revolut.rxdiffadapter.RxDiffAdapter
 
 interface ModalHostUIStatesBinding<UI : States.UI> : UIStatesModelBinding<UI>,
     ModalHostBinding
@@ -90,7 +90,7 @@ internal class ModalHostUIListStatesBindingImpl<D : States.Domain, UI : States.U
     delegates: List<RecyclerViewDelegate<*, *>>,
     recyclerViewId: Int,
     layoutManagerProvider: LayoutManagerProvider,
-    listAdapter: RxDiffAdapter,
+    listAdapter: DiffAdapter,
     debounceStreamProvider: DebounceStreamProvider?,
     private val uiListStatesModelBinding: UIListStatesModelBinding<UI> = UIListStatesModelBindingImpl(
         controller = controller,
@@ -132,7 +132,7 @@ fun <D : States.Domain, UI : States.UIList, S : FlowStep, Out : IOData.Output> M
     delegates: List<RecyclerViewDelegate<*, *>>,
     recyclerViewId: Int = R.id.recyclerView,
     layoutManagerProvider: LayoutManagerProvider = { DefaultLayoutManager(this) },
-    listAdapter: RxDiffAdapter = DefaultAdapter(),
+    listAdapter: DiffAdapter = DefaultAdapter(),
     debounceStreamProvider: DebounceStreamProvider? = null,
 ): ModalHostUIListStatesBinding<UI> {
     return ModalHostUIListStatesBindingImpl(

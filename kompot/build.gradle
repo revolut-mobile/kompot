@@ -50,7 +50,6 @@ tasks.withType(Test) {
 dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
     api "com.google.dagger:dagger:$daggerVersion"
-    api "com.revolut.recyclerkit:rxdiffadapter:$recyclerKitRxDiffAdapterVersion"
     api "com.revolut.recyclerkit:delegates:$recyclerKitDelegatesVersion"
     api "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"
     api "androidx.coordinatorlayout:coordinatorlayout:$coordinatorLayoutVersion"
