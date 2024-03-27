@@ -30,15 +30,13 @@ interface FlowModel<STEP : FlowStep, OUTPUT : IOData.Output> {
 
     val hasChildFlow: Boolean
 
-    val animation: TransitionAnimation
-
-    val restorationNeeded: Boolean
-
     fun navigationBinder(): ModelBinder<FlowNavigationCommand<STEP, OUTPUT>>
 
     fun getController(): Controller
 
-    fun restorePreviousState()
+    fun handleBackStack(immediate: Boolean) : Boolean
+
+    fun onTransitionCanceled(backward: Boolean)
 
     fun setNextState(
         step: STEP,
@@ -56,5 +54,4 @@ interface FlowModel<STEP : FlowStep, OUTPUT : IOData.Output> {
     fun restoreState(restorationPolicy: RestorationPolicy)
 
     fun handleNavigationDestination(navigationDestination: NavigationDestination): Boolean
-
 }

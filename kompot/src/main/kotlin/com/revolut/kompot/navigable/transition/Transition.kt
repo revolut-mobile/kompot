@@ -18,7 +18,7 @@ package com.revolut.kompot.navigable.transition
 
 import android.view.View
 
-internal interface Transition {
+interface Transition {
 
     fun start(
         from: View?,
@@ -28,4 +28,8 @@ internal interface Transition {
     )
 
     fun endImmediately()
+
+    companion object {
+        const val DURATION_DEFAULT = 300L
+    }
 }

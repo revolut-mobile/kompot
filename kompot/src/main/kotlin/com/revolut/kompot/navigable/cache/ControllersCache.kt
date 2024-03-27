@@ -31,4 +31,6 @@ interface ControllersCache {
     fun isControllerCached(controllerKey: ControllerKey): Boolean
 
     fun clearCache()
+
+    fun getCacheLogWithKeys() : String
 }

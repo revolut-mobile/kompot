@@ -25,35 +25,37 @@ import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SnapHelper
 import com.revolut.kompot.ExperimentalKompotApi
+import com.revolut.kompot.KompotPlugin
 import com.revolut.kompot.R
 import com.revolut.kompot.common.Event
 import com.revolut.kompot.common.EventResult
 import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.common.IOData
+import com.revolut.kompot.di.flow.scroller.BaseScrollerFlowComponent
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerModel
-import com.revolut.kompot.navigable.binder.CompositeBinding
 import com.revolut.kompot.navigable.findRootFlow
 import com.revolut.kompot.navigable.flow.Back
 import com.revolut.kompot.navigable.flow.BaseFlow
 import com.revolut.kompot.navigable.flow.FlowLifecycleDelegate
 import com.revolut.kompot.navigable.flow.FlowNavigationCommand
 import com.revolut.kompot.navigable.flow.FlowServiceEventHandler
-import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.PostFlowResult
 import com.revolut.kompot.navigable.flow.Quit
 import com.revolut.kompot.navigable.flow.ensureAvailability
 import com.revolut.kompot.navigable.flow.quitFlow
 import com.revolut.kompot.navigable.flow.scroller.steps.StepsChangeCommand
+import com.revolut.kompot.navigable.hooks.LifecycleViewTagHook
 import com.revolut.kompot.navigable.root.NavActionsScheduler
 import com.revolut.kompot.navigable.utils.Preconditions
+import com.revolut.kompot.navigable.vc.scroller.ScrollMode
 import com.revolut.kompot.view.ControllerContainer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 @ExperimentalKompotApi
-abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA : IOData.Output>(
+abstract class BaseScrollerFlow<STEP : ScrollerFlowStep, INPUT_DATA : IOData.Input, OUTPUT_DATA : IOData.Output>(
     val inputData: INPUT_DATA
 ) : Controller(), ScrollerFlow<OUTPUT_DATA>, EventsDispatcher {
 
@@ -89,7 +91,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
             layoutContainerId = itemContainerLayoutId,
             parentController = this,
             controllersCache = this.controllersCache,
-            flowModel = flowModel,
+            controllersFactory = flowModel::getController,
         )
     }
 
@@ -114,12 +116,13 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
     }
 
     protected abstract val flowModel: ScrollerFlowModel<STEP, OUTPUT_DATA>
+    override val hasBackStack: Boolean = false
 
-    override val controllerDelegates by lazy {
+    abstract override val component: BaseScrollerFlowComponent
+
+    override val controllerExtensions by lazy {
         component.getControllerExtensions()
     }
-
-    private val tillDestroyBinding = CompositeBinding()
 
     @IdRes
     protected open val recyclerViewId: Int = R.id.recyclerView
@@ -127,12 +130,15 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
     private lateinit var recyclerView: RecyclerView
 
     override fun createView(inflater: LayoutInflater): View {
-        val controllerContainer = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
+        val controllerContainer = getViewInflater(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
         controllerContainer.applyEdgeToEdgeConfig()
         view = controllerContainer as View
         view.tag = controllerName
+        hooksProvider?.getHook(LifecycleViewTagHook.Key)?.tagId?.let { lifecycleTag ->
+            view.setTag(lifecycleTag, lifecycle)
+        }
         view.findViewById<RecyclerView>(recyclerViewId).apply {
             recyclerView = this
             layoutManager = this@BaseScrollerFlow.layoutManager
@@ -154,9 +160,9 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
     }
 
     private fun scrollToSelectedStep(stepsChangeCommand: StepsChangeCommand<STEP>) {
-        val step = stepsChangeCommand.selected ?: return
+        val stepId = stepsChangeCommand.selectedStepId ?: return
 
-        val position = controllersAdapter.currentList.indexOf(step)
+        val position = controllersAdapter.currentList.indexOfFirst { it.id == stepId }
         if (position in 0..layoutManager.itemCount) {
             if (stepsChangeCommand.smoothScroll) {
                 //We need to queue the smooth scrolls until everything is laid out
@@ -180,7 +186,8 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
             dialogDisplayer = findRootFlow().rootDialogDisplayer,
             eventsDispatcher = this,
             controllersCache = controllersCache,
-            mainDispatcher = Dispatchers.Main.immediate
+            mainDispatcher = Dispatchers.Main.immediate,
+            controllerModelExtensions = component.getControllerModelExtensions(),
         )
 
         onCreateFlowView(view)
@@ -196,6 +203,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
 
     private fun submitStepsChange(stepsChangeCommand: StepsChangeCommand<STEP>) {
         if (controllersAdapter.currentList != stepsChangeCommand.steps) {
+            controllersAdapter.updateCache(controllersAdapter.currentList, stepsChangeCommand.steps)
             controllersAdapter.submitList(stepsChangeCommand.steps) {
                 scrollToSelectedStep(stepsChangeCommand)
             }
@@ -205,6 +213,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
     }
 
     final override fun onDestroy() {
+        controllersAdapter.updateCache(controllersAdapter.currentList, emptyList())
         childControllerManagers.forEach { manager -> manager.onDestroy() }
         super.onDestroy()
         tillDestroyBinding.clear()
@@ -217,6 +226,7 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
         super.onAttach()
         lifecycleDelegate.onAttach()
         childControllerManagers.reversed().forEach { manager -> manager.onAttach() }
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerAttached(this) }
     }
 
     override fun onDetach() {
@@ -232,6 +242,11 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
     override fun onTransitionEnd(enter: Boolean) {
         super.onTransitionEnd(enter)
         lifecycleDelegate.onTransitionEnd(enter)
+    }
+
+    override fun onTransitionCanceled() {
+        super.onTransitionCanceled()
+        lifecycleDelegate.onTransitionCanceled()
     }
 
     override fun onHostPaused() {
@@ -271,6 +286,13 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
 
     protected open fun onDestroyFlowView() = Unit
 
+    @Deprecated(
+        message = "In simple cases working with tabs preferred to use double side binding in DraggableTabsView",
+        replaceWith = ReplaceWith(
+            "bindToRecyclerView(doubleSideBindingEnabled = true)",
+            imports = ["com.revolut.core.ui_kit.views.DraggableTabsView"]
+        )
+    )
     protected open fun onFullyVisibleStepPositionChanged(step: STEP) = Unit
 
     protected fun back() {
@@ -300,20 +322,19 @@ abstract class BaseScrollerFlow<STEP : FlowStep, INPUT_DATA : IOData.Input, OUTP
                 Preconditions.requireMainThread("BaseScrollerFlow.back()")
                 back()
             }
+
             is Quit -> {
                 if (!navActionsScheduler.ensureAvailability(command)) return
                 Preconditions.requireMainThread("BaseScrollerFlow.quit()")
                 quitFlow(navActionsScheduler)
             }
+
             is PostFlowResult -> {
                 Preconditions.requireMainThread("BaseScrollerFlow.postFlowResult()")
                 onFlowResult(command.data)
             }
+
             else -> throw IllegalStateException("$command is not supported by the ScrollerFlow")
         }
-    }
-
-    enum class ScrollMode {
-        HORIZONTAL, VERTICAL, PAGER
     }
 }

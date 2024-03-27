@@ -18,12 +18,12 @@ package com.revolut.kompot.navigable.binder
 
 import androidx.annotation.VisibleForTesting
 
-interface ModelBinder<T>: ModelObserver<T> {
+interface ModelBinder<T> : ModelObserver<T> {
     fun bind(observer: ModelObserver<T>): Binding
     fun unbind(observer: ModelObserver<T>)
 }
 
-internal class DefaultModelBinder<T> : ModelBinder<T> {
+internal open class DefaultModelBinder<T> : ModelBinder<T> {
 
     @VisibleForTesting
     internal val observers = mutableListOf<ModelObserver<T>>()
@@ -43,6 +43,21 @@ internal class DefaultModelBinder<T> : ModelBinder<T> {
         }
     }
 
+}
+
+internal class StatefulModelBinder<T> : DefaultModelBinder<T>() {
+
+    private var latestValue: T? = null
+
+    override fun bind(observer: ModelObserver<T>): Binding {
+        latestValue?.let { value -> observer.notify(value) }
+        return super.bind(observer)
+    }
+
+    override fun notify(value: T) {
+        latestValue = value
+        super.notify(value)
+    }
 }
 
 @Suppress("FunctionName")

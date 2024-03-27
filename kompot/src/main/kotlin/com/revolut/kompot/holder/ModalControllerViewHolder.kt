@@ -26,6 +26,7 @@ import com.revolut.kompot.navigable.transition.TransitionFactory
 import com.revolut.kompot.navigable.transition.TransitionListener
 import com.revolut.kompot.view.ControllerContainer
 import com.revolut.kompot.view.RootFrameLayout
+import timber.log.Timber
 
 internal class ModalControllerViewHolder(
     override val container: ViewGroup,
@@ -59,6 +60,14 @@ internal class ModalControllerViewHolder(
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
+    }
+
+    override fun addToBottom(view: View) {
+        Timber.w(
+            "addToBottom has no effect on the modal controller view holder because " +
+                    "it's always expected to have one view only"
+        )
+        add(view)
     }
 
     override fun makeTransition(

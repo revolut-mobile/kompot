@@ -17,19 +17,74 @@
 package com.revolut.kompot.navigable
 
 import android.content.Intent
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.Lifecycle
+import com.revolut.kompot.navigable.utils.collectTillDetachView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import timber.log.Timber
 
-interface ControllerExtension {
-    fun onCreate() = Unit
+abstract class ControllerExtension {
 
-    fun onDestroy() = Unit
+    private lateinit var attachedScope: CoroutineScope
+    private var attached = false
+    private var detached = false
 
-    fun onAttach() = Unit
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    fun init(attachedScope: CoroutineScope) {
+        this.attachedScope = attachedScope
+    }
 
-    fun onDetach() = Unit
+    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    fun onParentLifecycleEvent(event: Lifecycle.Event) {
+        when (event) {
+            Lifecycle.Event.ON_CREATE,
+            Lifecycle.Event.ON_START -> {
+                onCreate()
+            }
+            Lifecycle.Event.ON_RESUME -> {
+                attached = true
+                detached = false
+                onAttach()
+            }
+            Lifecycle.Event.ON_PAUSE -> {
+                attached = false
+                detached = true
+                onDetach()
+            }
+            Lifecycle.Event.ON_STOP,
+            Lifecycle.Event.ON_DESTROY -> {
+                onDestroy()
+            }
+            Lifecycle.Event.ON_ANY -> Unit
+        }
+    }
 
-    fun handleBack(): Boolean = false
+    open fun onCreate() = Unit
 
-    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) = Unit
+    open fun onDestroy() = Unit
 
-    fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) = Unit
+    open fun onAttach() = Unit
+
+    open fun onDetach() = Unit
+
+    open fun handleBack(): Boolean = false
+
+    open fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) = Unit
+
+    open fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) = Unit
+
+    protected fun <T> Flow<T>.collectTillDetachView(
+        onError: suspend (Throwable) -> Unit = { Timber.e(it) },
+        onSuccessCompletion: suspend () -> Unit = {},
+        onEach: suspend (T) -> Unit = {}
+    ): Job = collectTillDetachView(
+        attached = attached,
+        detached = detached,
+        attachedScope = attachedScope,
+        onError = onError,
+        onSuccessCompletion = onSuccessCompletion,
+        onEach = onEach
+    )
 }

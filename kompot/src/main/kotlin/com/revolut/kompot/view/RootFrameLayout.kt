@@ -17,11 +17,25 @@
 package com.revolut.kompot.view
 
 import android.content.Context
+import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.SparseArray
 import android.widget.FrameLayout
 
 internal class RootFrameLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr)
+) : FrameLayout(context, attrs, defStyleAttr) {
+
+    /**
+     * Kompot has its own solution for storing views state. It creates a separate bundle for every controller
+     * and keeps views state in this bundle. To avoid duplicated data in the saved state, we'll need to ensure that host
+     * activity doesn't persist state of the controller views.
+     *
+     *  Root flow has empty implementation of the dispatchSaveInstanceState and dispatchRestoreInstanceState to ignore
+     *  framework's native saved state.
+     */
+    override fun dispatchSaveInstanceState(container: SparseArray<Parcelable>?) = Unit
+    override fun dispatchRestoreInstanceState(container: SparseArray<Parcelable>?) = Unit
+}

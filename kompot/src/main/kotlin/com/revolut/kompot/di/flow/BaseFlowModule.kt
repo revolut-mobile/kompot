@@ -20,6 +20,7 @@ import com.revolut.kompot.di.scope.FlowQualifier
 import com.revolut.kompot.di.scope.FlowScope
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerExtension
+import com.revolut.kompot.navigable.ControllerModelExtension
 import com.revolut.kompot.navigable.flow.BaseFlow
 import dagger.Binds
 import dagger.multibindings.Multibinds
@@ -34,4 +35,9 @@ interface BaseFlowModule {
     @FlowScope
     @FlowQualifier
     fun provideControllerExtensions(): Set<ControllerExtension>
+
+    @Multibinds
+    @FlowScope
+    @FlowQualifier
+    fun provideControllerModelExtensions(): Set<ControllerModelExtension>
 }

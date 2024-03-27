@@ -1,6 +1,6 @@
 package com.revolut.kompot.sample.feature.contacts.ui.screens.input
 
-import com.revolut.kompot.sample.feature.contacts.ui.screens.input.InputScreenContract.*
+import com.revolut.kompot.sample.feature.contacts.ui.screens.input.InputContract.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

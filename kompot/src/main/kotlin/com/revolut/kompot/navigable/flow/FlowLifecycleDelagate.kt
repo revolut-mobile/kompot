@@ -43,7 +43,7 @@ internal class FlowLifecycleDelegate(
 
     fun onDetach() {
         controllerModel.onLifecycleEvent(LifecycleEvent.HIDDEN)
-        childControllerManagers().reversed().forEach { manager -> manager.onDetach() }
+        childControllerManagers().asReversed().forEach { manager -> manager.onDetach() }
     }
 
     fun onTransitionStart(enter: Boolean) {
@@ -55,6 +55,12 @@ internal class FlowLifecycleDelegate(
     fun onTransitionEnd(enter: Boolean) {
         childControllerManagers().forEach { manager ->
             manager.activeController?.onTransitionEnd(enter)
+        }
+    }
+
+    fun onTransitionCanceled() {
+        childControllerManagers().forEach { manager ->
+            manager.activeController?.onTransitionCanceled()
         }
     }
 

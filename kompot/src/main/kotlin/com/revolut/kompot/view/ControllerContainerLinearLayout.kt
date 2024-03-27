@@ -18,52 +18,50 @@ package com.revolut.kompot.view
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.WindowInsets
 import android.widget.LinearLayout
-import com.revolut.kompot.R
 
 @SuppressLint("CustomViewStyleable")
 open class ControllerContainerLinearLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : LinearLayout(context, attrs, defStyleAttr), ControllerContainer {
-    private var transitionActive: Boolean = false
-    private var lastTransitionStartTime = 0L
-
-    final override var fitStatusBar = false
-    final override var fitNavigationBar = true
-
-    init {
-        val ta = context.obtainStyledAttributes(attrs, R.styleable.ControllerContainer)
-        fitStatusBar = ta.getBoolean(R.styleable.ControllerContainer_fitStatusBar, fitStatusBar)
-        fitNavigationBar = ta.getBoolean(R.styleable.ControllerContainer_fitNavigationBar, fitNavigationBar)
-        ta.recycle()
-    }
+) : LinearLayout(context, attrs, defStyleAttr), ControllerContainer by ControllerContainerDelegate(context, attrs) {
 
     override fun onAttachedToWindow() {
-        EdgeToEdgeViewDelegate.onViewAttachedToWindow(this)
+        handleViewAttachedToWindow(this)
         super.onAttachedToWindow()
     }
 
     override fun dispatchApplyWindowInsets(insets: WindowInsets): WindowInsets =
-        EdgeToEdgeViewDelegate.dispatchApplyWindowInsets(this, insets)
+        handleDispatchApplyWindowInsets(this, insets)
 
-    override fun onInterceptTouchEvent(event: MotionEvent?): Boolean = transitionActive || (System.currentTimeMillis() - lastTransitionStartTime <= 200) ||
-            super.onInterceptTouchEvent(event)
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean =
+        handleDispatchTouchEvent(ev) || super.dispatchTouchEvent(ev)
 
-    override fun onTransitionRunUp(enter: Boolean) {
-        lastTransitionStartTime = System.currentTimeMillis()
+    override fun saveState(outState: SparseArray<Parcelable>) {
+        allowSavedStateDispatch()
+        dispatchSaveInstanceState(outState)
     }
 
-    override fun onTransitionStart(enter: Boolean) {
-        transitionActive = true
-        lastTransitionStartTime = System.currentTimeMillis()
+    override fun restoreState(state: SparseArray<Parcelable>) {
+        allowSavedStateDispatch()
+        dispatchRestoreInstanceState(state)
     }
 
-    override fun onTransitionEnd(enter: Boolean) {
-        transitionActive = false
+    override fun dispatchSaveInstanceState(container: SparseArray<Parcelable>) {
+        if (useSavedStateDispatchAllowance()) {
+            super.dispatchSaveInstanceState(container)
+        }
+    }
+
+    override fun dispatchRestoreInstanceState(container: SparseArray<Parcelable>) {
+        if (useSavedStateDispatchAllowance()) {
+            super.dispatchRestoreInstanceState(container)
+        }
     }
 }

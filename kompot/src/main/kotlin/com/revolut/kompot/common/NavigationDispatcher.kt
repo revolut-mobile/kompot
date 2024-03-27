@@ -22,11 +22,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
 import com.revolut.kompot.ExperimentalBottomDialogStyle
+import com.revolut.kompot.ExperimentalKompotApi
+import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.flow.Flow
+import com.revolut.kompot.navigable.flow.scroller.ScrollerFlow
 import com.revolut.kompot.navigable.screen.Screen
 import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
 interface NavigationDestination
@@ -43,6 +45,7 @@ abstract class InternalDestination<INPUT : IOData.Input>(
 ) : NavigationDestination, Parcelable {
     @IgnoredOnParcel
     open val animation: TransitionAnimation? = null
+
     @IgnoredOnParcel
     open val addCurrentStepToBackStack: Boolean = true
 }
@@ -50,19 +53,33 @@ abstract class InternalDestination<INPUT : IOData.Input>(
 sealed class ModalDestination : NavigationDestination {
     data class ExplicitScreen<T : IOData.Output>(
         val screen: Screen<T>,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
         val onResult: ((T) -> Unit)? = null
     ) : ModalDestination()
 
     data class ExplicitFlow<T : IOData.Output>(
         val flow: Flow<T>,
-        val style: Style = Style.FULLSCREEN,
+        val style: Style = Style.FULLSCREEN_FADE,
         val onResult: ((T) -> Unit)? = null
     ) : ModalDestination()
 
+    @OptIn(ExperimentalKompotApi::class)
+    data class ExplicitScrollerFlow<T : IOData.Output>(
+        val flow: ScrollerFlow<T>,
+        val style: Style = Style.FULLSCREEN_FADE,
+        val onResult: ((T) -> Unit)? = null
+    ) : ModalDestination()
+
+    data class CallbackController(
+        val controller: Controller,
+        val style: Style = Style.FULLSCREEN_FADE,
+    ) : ModalDestination()
+
     enum class Style {
-        FULLSCREEN,
+        FULLSCREEN_FADE,
+        FULLSCREEN_IMMEDIATE,
         POPUP,
+        FULLSCREEN_SLIDE_FROM_BOTTOM,
 
         @ExperimentalBottomDialogStyle
         BOTTOM_DIALOG,

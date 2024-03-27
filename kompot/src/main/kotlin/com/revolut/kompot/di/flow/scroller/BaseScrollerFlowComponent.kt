@@ -16,13 +16,16 @@
 
 package com.revolut.kompot.di.flow.scroller
 
-import com.revolut.kompot.ExperimentalKompotApi
-import com.revolut.kompot.di.flow.ParentFlowComponent
+import com.revolut.kompot.di.flow.ControllerComponent
+import com.revolut.kompot.navigable.flow.FlowExtensionsInjector
+import com.revolut.kompot.navigable.flow.FlowModelExtensionsInjector
 import com.revolut.kompot.navigable.flow.scroller.BaseScrollerFlow
 import dagger.BindsInstance
 
-@ExperimentalKompotApi
-interface BaseScrollerFlowComponent : ParentFlowComponent {
+interface BaseScrollerFlowComponent :
+    ControllerComponent,
+    FlowExtensionsInjector,
+    FlowModelExtensionsInjector {
     interface Builder<T : BaseScrollerFlowComponent, B> {
 
         @BindsInstance

@@ -17,5 +17,13 @@
 package com.revolut.kompot.navigable.flow
 
 import android.os.Parcelable
+import com.revolut.kompot.navigable.ControllerKey
 
 interface FlowStep : Parcelable
+
+interface ReusableFlowStep : FlowStep {
+    val key: String
+}
+
+internal fun ReusableFlowStep.getControllerKey(flowKey: ControllerKey): ControllerKey =
+    ControllerKey("${flowKey}_$key")

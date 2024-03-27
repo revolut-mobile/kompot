@@ -16,14 +16,16 @@
 
 package com.revolut.kompot.navigable.saved_state
 
+import android.os.Build
 import android.os.Bundle
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import com.revolut.kompot.navigable.ControllerManager
-import com.revolut.kompot.navigable.TestFlow
-import com.revolut.kompot.navigable.TestFlowModel
-import com.revolut.kompot.navigable.TestState
-import com.revolut.kompot.navigable.TestStep
+import com.revolut.kompot.navigable.components.TestFlow
+import com.revolut.kompot.navigable.components.TestFlowModel
+import com.revolut.kompot.navigable.components.TestState
+import com.revolut.kompot.navigable.components.TestStep
+import com.revolut.kompot.navigable.cache.DefaultControllersCache
 import com.revolut.kompot.navigable.flow.RestorationPolicy
 import com.revolut.kompot.navigable.utils.Preconditions
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +44,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@Config(manifest = Config.NONE, sdk = [Build.VERSION_CODES.N])
 internal class FlowSavedStateTest {
 
     private val parentControllerManager: ControllerManager = mock {
@@ -68,7 +70,8 @@ internal class FlowSavedStateTest {
 
         flow.onCreate()
         flow.onAttach()
-        flowModel.next(TestStep.Step2, true)
+        flowModel.changeState(2)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -82,7 +85,7 @@ internal class FlowSavedStateTest {
         restoredFlow.onCreate()
         restoredFlow.onAttach()
 
-        assertEquals(TestStep.Step2, restoredFlowModel.step)
+        assertEquals(TestStep(2), restoredFlowModel.step)
         assertEquals(TestState(2), restoredFlowModel.stateWrapper.state)
     }
 
@@ -97,7 +100,7 @@ internal class FlowSavedStateTest {
         //mutate current step state
         flowModel.changeState(-1)
         //navigate to the next step. state will change accordingly
-        flowModel.next(TestStep.Step2, true)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -114,7 +117,7 @@ internal class FlowSavedStateTest {
         restoredFlow.handleBack()
 
         //First entry from the back stack should be restored
-        assertEquals(TestStep.Step1, restoredFlowModel.step)
+        assertEquals(TestStep(1), restoredFlowModel.step)
         assertEquals(TestState(-1), restoredFlowModel.stateWrapper.state)
     }
 
@@ -129,15 +132,14 @@ internal class FlowSavedStateTest {
 
         //run lifecycle events for the flows
         flow.onCreate()
-        nestedFlow.onCreate()
-
         flow.onAttach()
-        nestedFlow.onAttach()
 
         //change internal state of the flow and the nested flow
         //by moving each of them to the next step
-        nestedFlowModel.next(TestStep.Step2, true)
-        flowModel.next(TestStep.Step2, true)
+        nestedFlowModel.changeState(newValue = 2)
+        nestedFlowModel.next(TestStep(2), true)
+        flowModel.changeState(newValue = 2)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -166,7 +168,7 @@ internal class FlowSavedStateTest {
         restoredNestedFlow.onAttach()
 
         //check that nested flow restored its step
-        assertEquals(TestStep.Step2, restoredNestedFlowModel.step)
+        assertEquals(TestStep(2), restoredNestedFlowModel.step)
         assertEquals(TestState(2), restoredNestedFlowModel.stateWrapper.state)
     }
 
@@ -177,7 +179,7 @@ internal class FlowSavedStateTest {
 
         flow.onCreate()
         flow.onAttach()
-        flowModel.next(TestStep.Step2, true)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -192,7 +194,7 @@ internal class FlowSavedStateTest {
         restoredFlow.onAttach()
 
         //check that Step and State are the same as initial
-        assertEquals(TestStep.Step1, restoredFlowModel.step)
+        assertEquals(TestStep(1), restoredFlowModel.step)
         assertEquals(TestState(1), restoredFlowModel.stateWrapper.state)
     }
 
@@ -206,7 +208,7 @@ internal class FlowSavedStateTest {
 
         //mutate state of the flow
         flowModel.changeState(newValue = 11)
-        flowModel.next(TestStep.Step2, true)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -224,18 +226,19 @@ internal class FlowSavedStateTest {
         restoredFlow.handleBack()
 
         //check that Step and State are the same as initial
-        assertEquals(TestStep.Step1, restoredFlowModel.step)
+        assertEquals(TestStep(1), restoredFlowModel.step)
         assertEquals(TestState(1), restoredFlowModel.stateWrapper.state)
     }
 
     @Test
     fun `should postpone state restore`() {
-        val flowModel = TestFlowModel(postponeSavedStateRestore = true)
+        val flowModel = TestFlowModel()
         val flow = TestFlow(flowModel)
 
         flow.onCreate()
         flow.onAttach()
-        flowModel.next(TestStep.Step2, true)
+        flowModel.changeState(2)
+        flowModel.next(TestStep(2), true)
 
         val bundle = Bundle()
 
@@ -251,8 +254,146 @@ internal class FlowSavedStateTest {
 
         assertTrue(restoredFlowModel.startPostponedSavedStateRestore())
 
-        assertEquals(TestStep.Step2, restoredFlowModel.step)
+        assertEquals(TestStep(2), restoredFlowModel.step)
         assertEquals(TestState(2), restoredFlowModel.stateWrapper.state)
+    }
+
+    @Test
+    fun `GIVEN canceled parent flow transition WHEN restore from saved state THEN restore nested flow latest state`() {
+        val nestedFlowModel = TestFlowModel()
+        val nestedFlow = TestFlow(nestedFlowModel)
+
+        val parentFlowModel = TestFlowModel(firstStepController = nestedFlow)
+        val parentFlow = TestFlow(parentFlowModel)
+
+        val rootFlowModel = TestFlowModel(firstStepController = parentFlow)
+        val rootFlow = TestFlow(rootFlowModel)
+
+        rootFlow.onCreate()
+        rootFlow.onAttach()
+
+        parentFlowModel.next(TestStep(2), true)
+        //trigger transition cancellation
+        parentFlow.getOrCreateChildControllerManager(
+            controllerContainer = parentFlow.mainControllerContainer,
+            id = parentFlow.mainControllerContainer.containerId,
+        ).onTransitionCanceled(
+            from = nestedFlow,
+            backward = false
+        )
+
+        //modify nested flow
+        nestedFlowModel.next(TestStep(2), true)
+
+        val bundle = Bundle()
+
+        rootFlow.saveState(bundle)
+
+        //instantiate new flows to simulate app state restore
+        val restoredNestedFlowModel = TestFlowModel()
+        val restoredNestedFlow = TestFlow(restoredNestedFlowModel)
+
+        val restoredParentFlowModel = TestFlowModel(firstStepController = restoredNestedFlow)
+        val restoredParentFlow = TestFlow(restoredParentFlowModel)
+
+        val restoredRootFlowModel = TestFlowModel(firstStepController = restoredParentFlow)
+        val restoredRootFlow = TestFlow(restoredRootFlowModel)
+
+        restoredParentFlow.bind(parentControllerManager, restoredRootFlow)
+        restoredNestedFlow.bind(parentControllerManager, restoredParentFlow)
+
+        //push bundle to the flow
+        restoredRootFlow.restoreState(RestorationPolicy.FromBundle(bundle))
+
+        restoredRootFlow.onCreate()
+        restoredRootFlow.onAttach()
+
+        assertEquals(TestStep(1), restoredParentFlowModel.step)
+        assertEquals(TestStep(2), restoredNestedFlowModel.step) //nested flow restored successfully
+    }
+
+    @Test
+    fun `GIVEN flow with pending saved state WHEN try save flow state THEN don't save state`() {
+        //create bundle with flow's saved state
+        val flowModel = TestFlowModel()
+        val flow = TestFlow(flowModel)
+        flow.onCreate()
+        flow.onAttach()
+        val bundle = Bundle()
+        flow.saveState(bundle)
+
+        //simulate flow that postpones saved state restoration, but doesn't trigger startPostponedSavedStateRestore()
+        val pendingRestoreFlowModel = TestFlowModel(postponeSavedStateRestore = true)
+        val pendingRestoreFlow = TestFlow(pendingRestoreFlowModel)
+
+        pendingRestoreFlow.restoreState(RestorationPolicy.FromBundle(bundle))
+        pendingRestoreFlow.onCreate()
+        pendingRestoreFlow.onAttach()
+        pendingRestoreFlowModel.changeState(2)
+        pendingRestoreFlowModel.next(TestStep(2), true)
+
+        val bundle2 = Bundle()
+        //try to save state
+        //Should do nothing, because we can't save state of the flow that has a pending saved state and doesn't trigger startPostponedSavedStateRestore()
+        pendingRestoreFlow.saveState(bundle2)
+
+        //try to restore flow from from the bundle
+        val restoredFlowModel = TestFlowModel()
+        val restoredFlow = TestFlow(restoredFlowModel)
+
+        restoredFlow.restoreState(RestorationPolicy.FromBundle(bundle2))
+        restoredFlow.onCreate()
+        restoredFlow.onAttach()
+
+        //Flow has initial values, there was nothing to restore
+        assertEquals(TestStep(1), restoredFlowModel.step)
+        assertEquals(TestState(1), restoredFlowModel.stateWrapper.state)
+    }
+
+    @Test
+    fun `GIVEN restored flow with backstack WHEN handleBack, cancel transition and handleBack again THEN controller is reused`() {
+        // Save flow into bundle
+        var flowModel = TestFlowModel().apply {
+            randomiseControllerKey = true
+        }
+        var flow = TestFlow(flowModel, DefaultControllersCache(10))
+        flow.apply {
+            onCreate()
+            onAttach()
+        }
+        flowModel.apply {
+            next(TestStep(2), true)
+            next(TestStep(3), true)
+        }
+        val bundle = Bundle()
+        flow.saveState(bundle)
+
+
+        // Recreate and restore
+        flowModel = TestFlowModel().apply {
+            randomiseControllerKey = true
+        }
+        flow = TestFlow(flowModel, DefaultControllersCache(10))
+        flow.apply {
+            restoreState(bundle)
+            onCreate()
+            onAttach()
+        }
+        // Handle back and cancel
+        flow.handleBack()
+        assertEquals(TestStep(2), flowModel.step)
+        val controller2 = flowModel.getController()
+        flow.getOrCreateChildControllerManager(
+            controllerContainer = flow.mainControllerContainer,
+            id = flow.mainControllerContainer.containerId,
+        ).onTransitionCanceled(
+            from = controller2,
+            backward = true
+        )
+
+        // Handle back again, assert cached controller is used
+        flow.handleBack()
+        assertEquals(flowModel.getController(), controller2)
     }
 
 }

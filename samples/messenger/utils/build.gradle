@@ -10,3 +10,7 @@ addDependencies(
                 [configuration: "kapt", dependency: "com.google.dagger:dagger-compiler:$dagger_version"],
         ]
 )
+
+android {
+    namespace "com.revolut.kompot.sample.utils"
+}

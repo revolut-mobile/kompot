@@ -26,19 +26,18 @@ import com.revolut.kompot.common.NavigationDestination
 import com.revolut.kompot.common.NavigationEvent
 import com.revolut.kompot.common.NavigationEventHandledResult
 import com.revolut.kompot.navigable.Controller
-import com.revolut.kompot.navigable.ControllerKey
 import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.TransitionAnimation
-import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
-import com.revolut.kompot.navigable.screen.BaseScreen
 import com.revolut.kompot.navigable.binder.ModelBinder
-import java.util.*
-import kotlin.collections.ArrayList
+import com.revolut.kompot.navigable.binder.StatefulModelBinder
+import com.revolut.kompot.navigable.screen.BaseScreen
+import com.revolut.kompot.navigable.vc.ViewController
+import com.revolut.kompot.utils.PostponedRestorationTriggeredEvent
 
 abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData.Output> : ControllerModel(), FlowModel<STEP, OUTPUT> {
     internal lateinit var stateWrapper: FlowStateWrapper<STATE, STEP>
 
-    private val _backStack = LinkedList<FlowStateWrapper<STATE, STEP>>()
+    private val _backStack = mutableListOf<FlowStateWrapper<STATE, STEP>>()
     internal val backStack: List<FlowStateWrapper<STATE, STEP>>
         get() = _backStack
 
@@ -46,13 +45,10 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         get() = stateWrapper.step
 
     protected val previousStep: STEP?
-        get() = _backStack.peekLast()?.step
+        get() = _backStack.lastOrNull()?.step
 
     final override val hasBackStack: Boolean
         get() = _backStack.isNotEmpty()
-
-    override val animation: TransitionAnimation
-        get() = stateWrapper.animation
 
     final override val hasChildFlow: Boolean
         get() = stateWrapper.childFlowState != null
@@ -63,24 +59,43 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
             stateWrapper = stateWrapper.copy(state = value)
         }
 
-    override val restorationNeeded: Boolean
-        get() = restorationPolicy?.postponed == false
+    protected val restorationState: RestorationState?
+        get() = when {
+            restorationPolicy?.postponed == true -> RestorationState.POSTPONED
+            restorationPolicy != null -> RestorationState.REQUIRED
+            else -> null
+        }
 
     private var restorationPolicy: RestorationPolicy? = null
 
+    @Deprecated("Replaced by synchronous API. See BaseFlowModel#next")
     private var onNextStateUpdater: (STATE) -> STATE? = { null }
+    private var latestStateBackup: Backup? = null
 
     protected abstract val initialStep: STEP
     protected abstract val initialState: STATE
     protected open val initialBackStack: List<Pair<STEP, TransitionAnimation>> = emptyList()
 
-    private val navigationCommandsBinder = ModelBinder<FlowNavigationCommand<STEP, OUTPUT>>()
+    private val navigationCommandsBinder = StatefulModelBinder<FlowNavigationCommand<STEP, OUTPUT>>()
 
     final override fun onLifecycleEvent(event: LifecycleEvent) {
         if (event == LifecycleEvent.CREATED) {
-            setInitialFlowModelState(restorationPolicy)
+            performCreate()
         }
         super.onLifecycleEvent(event)
+    }
+
+    private fun performCreate() {
+        setInitialFlowModelState(restorationPolicy)
+        navigationCommandsBinder.notify(
+            PushControllerCommand(
+                controller = getController(),
+                fromSavedState = restorationState == RestorationState.REQUIRED,
+                animation = TransitionAnimation.NONE,
+                backward = false,
+                executeImmediately = true,
+            )
+        )
     }
 
     private fun setInitialFlowModelState(restorationPolicy: RestorationPolicy?) {
@@ -102,7 +117,7 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         stateWrapper = FlowStateWrapper(
             state = initialState,
             step = initialStep,
-            animation = prepareInitialAnimation()
+            animation = prepareInitialTransition()
         )
         prepareBackStack(initialBackStack)
     }
@@ -116,6 +131,8 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         if (bundle.containsKey(STATE_WRAPPER_ARG) && bundle.containsKey(BACK_STACK_ARG)) {
             stateWrapper = requireNotNull(bundle.getParcelable(STATE_WRAPPER_ARG))
             setBackStack(requireNotNull(bundle.getParcelableArrayList(BACK_STACK_ARG)))
+        } else {
+            setInitialState()
         }
     }
 
@@ -143,13 +160,40 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         message = "Use next() command and update state with currentState = currentState.copy(...)",
         replaceWith = ReplaceWith("next(step, addCurrentStepToBackStack, animation)")
     )
-    fun next(step: STEP, addCurrentStepToBackStack: Boolean, animation: TransitionAnimation? = null, stateUpdater: (STATE) -> STATE? = { null }) {
+    fun next(
+        step: STEP,
+        addCurrentStepToBackStack: Boolean,
+        animation: TransitionAnimation? = null,
+        executeImmediately: Boolean = false,
+        stateUpdater: (STATE) -> STATE? = { null },
+    ) {
         onNextStateUpdater = stateUpdater
-        next(step, addCurrentStepToBackStack, animation)
+        next(step, addCurrentStepToBackStack, animation, executeImmediately = executeImmediately)
     }
 
-    fun next(step: STEP, addCurrentStepToBackStack: Boolean, animation: TransitionAnimation? = null) {
-        navigationCommandsBinder.notify(Next(step, addCurrentStepToBackStack, animation ?: TransitionAnimation.SLIDE_RIGHT_TO_LEFT))
+    /**
+     * Start transition to the specified step
+     *
+     * @param executeImmediately start transition immediately without scheduling to the main thread.
+     * Can produce side effects in the controller that is about to appear.
+     * Problematic use case: You trigger command from the coroutine dispatched with Dispatchers.Unconfined or Dispatcher.Main.immediate.
+     * If the new controller starts coroutines in the onCreated/onShown, their execution will be delayed because
+     * unconfined dispatchers use event loops to prevent stack overflow in the nested invocations.
+     */
+    fun next(
+        step: STEP,
+        addCurrentStepToBackStack: Boolean,
+        animation: TransitionAnimation? = null,
+        executeImmediately: Boolean = false,
+    ) {
+        navigationCommandsBinder.notify(
+            Next(
+                step = step,
+                addCurrentStepToBackStack = addCurrentStepToBackStack,
+                animation = animation ?: TransitionAnimation.SLIDE_RIGHT_TO_LEFT,
+                executeImmediately = executeImmediately,
+            )
+        )
     }
 
     fun back() {
@@ -173,45 +217,29 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         if (cachedController == null && controller is BaseScreen<*, *, *>) {
             controller.doOnCreate { stateWrapper.currentScreenState?.run(controller::restoreState) }
         }
+        if (cachedController == null && controller is ViewController<*>) {
+            controller.doOnCreate { stateWrapper.currentScreenState?.run(controller::restoreState) }
+        }
 
         stateWrapper = stateWrapper.copy(currentControllerKey = controller.key)
 
         return controller
     }
 
-    protected fun dependentController(
-        flowKey: ControllerKey,
-        step: FlowStep,
-        controllerProvider: () -> Controller
-    ): Controller {
-        val controllerKey = ControllerKey(step.javaClass.canonicalName ?: step.javaClass.simpleName)
-        val cachedController = controllersCache.getController(controllerKey)
-        return cachedController ?: controllerProvider().apply {
-            cacheStrategy = ControllerCacheStrategy.DependentOn(flowKey)
-            keyInitialization = { controllerKey }
-        }
-    }
-
-    protected fun dependentController(
-        flowKey: String,
-        step: FlowStep,
-        controllerProvider: () -> Controller
-    ): Controller = dependentController(ControllerKey(flowKey), step, controllerProvider)
-
     private fun prepareBackStack(initialBackStack: List<Pair<STEP, TransitionAnimation>>) {
         _backStack.clear()
-        initialBackStack.forEach { (step, animation) ->
+        initialBackStack.forEach { (step, transition) ->
             _backStack.add(
                 FlowStateWrapper(
                     state = initialState,
                     step = step,
-                    animation = animation
+                    animation = transition
                 )
             )
         }
     }
 
-    private fun prepareInitialAnimation() =
+    private fun prepareInitialTransition(): TransitionAnimation =
         if (initialBackStack.isEmpty()) {
             TransitionAnimation.NONE
         } else {
@@ -238,7 +266,7 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
                 is StepRestorationCriteria.RestoreByClass<*> -> stepRestorationCriteria.stepClass == it.step.javaClass
             }
         }?.let {
-            while (hasBackStack && _backStack.last.step != it.step) {
+            while (hasBackStack && _backStack.last().step != it.step) {
                 removePreviousStateUnsafe()
             }
             if (stepRestorationCriteria.removeCurrent) {
@@ -249,17 +277,40 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
     }
 
     private fun removePreviousStateUnsafe() {
-        invalidateCache(_backStack.last, destroy = true)
-        _backStack.pollLast()
+        invalidateCache(_backStack.last(), destroy = true)
+        _backStack.removeLast()
     }
 
-    final override fun restorePreviousState() {
-        if (hasBackStack) {
-            stateWrapper = _backStack.removeLast()
-        }
+    final override fun handleBackStack(immediate: Boolean): Boolean {
+        if (!hasBackStack) return false
+        val backwardAnimation = stateWrapper.animation
+
+        val prevStateWrapper = stateWrapper
+        stateWrapper = _backStack.removeLast()
+        val targetController = getController()
+        latestStateBackup = Backup(
+            state = prevStateWrapper,
+            backstackTopEntry = stateWrapper
+        )
+
+        navigationCommandsBinder.notify(
+            PushControllerCommand(
+                controller = targetController,
+                fromSavedState = !targetController.created,
+                animation = backwardAnimation,
+                backward = true,
+                executeImmediately = immediate,
+            )
+        )
+        return true
     }
 
-    final override fun setNextState(step: STEP, animation: TransitionAnimation, addCurrentStepToBackStack: Boolean, childFlowModel: FlowModel<*, *>?) {
+    final override fun setNextState(
+        step: STEP,
+        animation: TransitionAnimation,
+        addCurrentStepToBackStack: Boolean,
+        childFlowModel: FlowModel<*, *>?
+    ) {
         if (!addCurrentStepToBackStack) {
             invalidateCache(stateWrapper, destroy = false)
         } else {
@@ -284,6 +335,20 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         onNextStateUpdater = { null }
     }
 
+    override fun onTransitionCanceled(backward: Boolean) {
+        //TODO: PMNGDE-4725 Transitions started with addCurrentStepToBackStack = false are not restored
+        if (backward) {
+            latestStateBackup?.let { backup ->
+                stateWrapper = backup.state
+                _backStack.add(backup.backstackTopEntry)
+            }
+        } else {
+            if (hasBackStack) {
+                stateWrapper = _backStack.removeLast()
+            }
+        }
+    }
+
     private fun invalidateCache(state: FlowStateWrapper<*, *>, destroy: Boolean) {
         if (state.currentControllerKey != null) {
             controllersCache.removeController(state.currentControllerKey, destroy)
@@ -295,7 +360,9 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
     }
 
     private fun getChildFlowState(childFlowModel: FlowModel<*, *>?) =
-        (childFlowModel as? BaseFlowModel<*, *, *>)?.let {
+        (childFlowModel as? BaseFlowModel<*, *, *>)?.takeIf {
+            it.restorationState != RestorationState.POSTPONED
+        }?.let {
             ChildFlowState(it.stateWrapper.copy(), ArrayList(it.backStack))
         }
 
@@ -304,6 +371,7 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
     }
 
     final override fun saveState(outState: Bundle) {
+        if (restorationState == RestorationState.POSTPONED) return
         outState.putParcelable(STATE_WRAPPER_ARG, stateWrapper)
         outState.putParcelableArrayList(BACK_STACK_ARG, ArrayList(backStack))
     }
@@ -329,6 +397,7 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
         navigationCommandsBinder.notify(restorationCommand)
 
         this.restorationPolicy = null
+        eventsDispatcher.handleEvent(PostponedRestorationTriggeredEvent())
         return true
     }
 
@@ -359,4 +428,9 @@ abstract class BaseFlowModel<STATE : FlowState, STEP : FlowStep, OUTPUT : IOData
 
         class RestoreByStep(val condition: (FlowStep) -> Boolean, removeCurrent: Boolean) : StepRestorationCriteria(removeCurrent)
     }
+
+    private inner class Backup(
+        val state: FlowStateWrapper<STATE, STEP>,
+        val backstackTopEntry: FlowStateWrapper<STATE, STEP>,
+    )
 }

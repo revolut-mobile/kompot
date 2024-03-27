@@ -32,6 +32,7 @@ android {
 
 dependencies {
     implementation project(':kompot')
+    implementation project(':kompot_coroutines')
     implementation project(':kompot_coroutines_test')
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"

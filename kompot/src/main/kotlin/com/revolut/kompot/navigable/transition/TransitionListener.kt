@@ -16,7 +16,7 @@
 
 package com.revolut.kompot.navigable.transition
 
-internal interface TransitionListener {
+interface TransitionListener {
 
     fun onTransitionCreated()
 
@@ -26,4 +26,5 @@ internal interface TransitionListener {
 
     fun onTransitionFinished()
 
+    fun onTransitionCanceled()
 }

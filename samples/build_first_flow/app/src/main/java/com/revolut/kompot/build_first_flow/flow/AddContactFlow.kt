@@ -4,8 +4,6 @@ import com.revolut.kompot.build_first_flow.App
 import com.revolut.kompot.build_first_flow.R
 import com.revolut.kompot.build_first_flow.flow.di.AddContactFlowComponent
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.dialog.DefaultLoadingDialogDisplayer
-import com.revolut.kompot.dialog.DialogDisplayer
 import com.revolut.kompot.navigable.root.RootFlow
 import com.revolut.kompot.view.ControllerContainerFrameLayout
 

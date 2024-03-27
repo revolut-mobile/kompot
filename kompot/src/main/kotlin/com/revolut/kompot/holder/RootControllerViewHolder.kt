@@ -32,7 +32,7 @@ internal class RootControllerViewHolder : ControllerViewHolder {
 
     private var _container: ViewGroup? = null
         set(value) {
-            controllerViewHolder = value?.let { DefaultControllerViewHolder(it)}
+            controllerViewHolder = value?.let { DefaultControllerViewHolder(it) }
             field = value
         }
 
@@ -49,6 +49,10 @@ internal class RootControllerViewHolder : ControllerViewHolder {
 
     override fun add(view: View) {
         controllerViewHolder?.add(view)
+    }
+
+    override fun addToBottom(view: View) {
+        controllerViewHolder?.addToBottom(view)
     }
 
     override fun makeTransition(

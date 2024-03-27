@@ -13,6 +13,8 @@ android {
         buildToolsVersion androidBuildToolsVersion
         targetSdkVersion androidTargetSdkVersion
         minSdkVersion androidMinSdkVersion
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     sourceSets {
@@ -39,10 +41,15 @@ android {
     }
 }
 
+tasks.withType(Test) {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    })
+}
+
 dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
     api "com.google.dagger:dagger:$daggerVersion"
-    api "com.revolut.recyclerkit:rxdiffadapter:$recyclerKitRxDiffAdapterVersion"
     api "com.revolut.recyclerkit:delegates:$recyclerKitDelegatesVersion"
     api "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"
     api "androidx.coordinatorlayout:coordinatorlayout:$coordinatorLayoutVersion"
@@ -66,6 +73,8 @@ dependencies {
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:$mockitoKotlinVersion"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "androidx.test:core-ktx:$androidxTestVersion"
+    testImplementation project(':kompot_coroutines_test')
 
     testImplementation("org.robolectric:robolectric:$robolectricVersion") {
         exclude group: "com.google.auto.service", module: "auto-service"

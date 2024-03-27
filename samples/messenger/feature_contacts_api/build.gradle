@@ -7,3 +7,7 @@ apply from: '../kompot_sample_dependencies.gradle'
 addDependencies(
         as_general_dependencies_api
 )
+
+android {
+    namespace "com.revolut.kompot.sample.feature.api.contacts"
+}

@@ -18,9 +18,10 @@ package com.revolut.kompot.di.screen
 
 import com.revolut.kompot.navigable.screen.ScreenExtensionsInjector
 import com.revolut.kompot.navigable.screen.BaseScreen
+import com.revolut.kompot.navigable.screen.ScreenModelExtensionsInjector
 import dagger.BindsInstance
 
-interface BaseScreenComponent : ScreenExtensionsInjector {
+interface BaseScreenComponent : ScreenExtensionsInjector, ScreenModelExtensionsInjector {
     interface Builder<T : BaseScreenComponent, B> {
 
         @BindsInstance

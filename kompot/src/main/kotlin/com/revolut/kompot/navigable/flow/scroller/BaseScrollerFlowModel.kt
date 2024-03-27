@@ -22,7 +22,6 @@ import com.revolut.kompot.navigable.ControllerModel
 import com.revolut.kompot.navigable.binder.ModelBinder
 import com.revolut.kompot.navigable.flow.Back
 import com.revolut.kompot.navigable.flow.FlowNavigationCommand
-import com.revolut.kompot.navigable.flow.FlowStep
 import com.revolut.kompot.navigable.flow.PostFlowResult
 import com.revolut.kompot.navigable.flow.Quit
 import com.revolut.kompot.navigable.flow.scroller.steps.Steps
@@ -32,7 +31,7 @@ import com.revolut.kompot.utils.MutableBehaviourFlow
 import kotlinx.coroutines.flow.Flow
 
 @ExperimentalKompotApi
-abstract class BaseScrollerFlowModel<STEP : FlowStep, OUTPUT : IOData.Output> :
+abstract class BaseScrollerFlowModel<STEP : ScrollerFlowStep, OUTPUT : IOData.Output> :
     ControllerModel(), ScrollerFlowModel<STEP, OUTPUT> {
 
     protected abstract val initialSteps: Steps<STEP>
@@ -53,14 +52,14 @@ abstract class BaseScrollerFlowModel<STEP : FlowStep, OUTPUT : IOData.Output> :
     final override fun stepsCommands(): Flow<StepsChangeCommand<STEP>> = _stepsCommands
 
     protected fun updateSteps(
-        selected: STEP? = null,
+        selectedStepId: String? = null,
         steps: List<STEP> = lastStepsCommand.steps,
         smoothScroll: Boolean = true,
     ) {
         _stepsCommands.tryEmit(
             StepsChangeCommand(
                 steps = steps,
-                selected = selected,
+                selectedStepId = selectedStepId,
                 smoothScroll = smoothScroll
             )
         )

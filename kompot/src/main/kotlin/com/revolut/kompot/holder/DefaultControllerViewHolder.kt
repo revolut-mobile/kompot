@@ -42,9 +42,22 @@ internal class DefaultControllerViewHolder(
         activeTransition?.endImmediately()
         container.removeView(view)
         container.addView(
-            view,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            /* view */ view,
+            /* width */ ViewGroup.LayoutParams.MATCH_PARENT,
+            /* height */ ViewGroup.LayoutParams.MATCH_PARENT
+        )
+    }
+
+    override fun addToBottom(view: View) {
+        activeTransition?.endImmediately()
+        container.removeView(view)
+        container.addView(
+            /* view */ view,
+            /* index */ 0,
+            /* params */ ViewGroup.LayoutParams(
+                /* width */ ViewGroup.LayoutParams.MATCH_PARENT,
+                /* height */ ViewGroup.LayoutParams.MATCH_PARENT
+            )
         )
     }
 

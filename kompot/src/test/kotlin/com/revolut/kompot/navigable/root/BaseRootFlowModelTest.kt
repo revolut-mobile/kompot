@@ -38,8 +38,8 @@ internal class BaseRootFlowModelTest {
     @Parcelize
     class TestStep : FlowStep
 
-    val testNavigationDestination: NavigationDestination = ModalDestination.ExplicitScreen<IOData.EmptyOutput>(mock())
-    val testNavigationEvent = NavigationEvent(testNavigationDestination)
+    private val testNavigationDestination: NavigationDestination = ModalDestination.ExplicitScreen<IOData.EmptyOutput>(mock())
+    private val testNavigationEvent = NavigationEvent(testNavigationDestination)
 
     @Test
     fun `GIVEN model has overriden destination handling WHEN handle overriden destination THEN super handling is not called`() {
@@ -57,7 +57,7 @@ internal class BaseRootFlowModelTest {
 
         model.tryHandleEvent(testNavigationEvent)
 
-        verify(rootNavigator, never()).openModal(any(), any())
+        verify(rootNavigator, never()).openModal(any(), any(), any())
     }
 
     @Test
@@ -78,6 +78,6 @@ internal class BaseRootFlowModelTest {
         event._controller = mock()
         model.tryHandleEvent(event)
 
-        verify(rootNavigator).openModal(any(), any())
+        verify(rootNavigator).openModal(any(), any(), any())
     }
 }

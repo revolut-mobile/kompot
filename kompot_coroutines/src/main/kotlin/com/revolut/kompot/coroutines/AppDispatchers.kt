@@ -17,31 +17,41 @@
 package com.revolut.kompot.coroutines
 
 import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.coroutines.CoroutineContext
 
 object AppDispatchers {
 
-    val Default
-        get() = dispatcherOverride {
-            Dispatchers.Default
-        }
+    val Default: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.Default
 
-    val IO
-        get() = dispatcherOverride {
-            Dispatchers.IO
-        }
+    val IO: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.IO
 
-    val Unconfined
-        get() = dispatcherOverride {
-            Dispatchers.Unconfined
-        }
+    val Unconfined: CoroutineDispatcher
+        get() = dispatcherOverride() ?: Dispatchers.Unconfined
 
     /**
      * Main is testable by default. We can override it with Dispatchers.setMain(context) call
      */
-    internal val Main get() = Dispatchers.Main
+    internal val Main: CoroutineDispatcher get() = Dispatchers.Main
 
     @VisibleForTesting
-    var dispatcherOverride: (() -> CoroutineContext) -> CoroutineContext = { it() }
+    var dispatcherOverride: () -> CoroutineDispatcher? = { null }
+}
+
+/**
+ * A dispatcher that executes the computations immediately in the thread that requests it.
+ *
+ * This dispatcher is similar to [Dispatchers.Unconfined] but does not attempt to avoid stack overflows.
+ */
+@ExperimentalCoroutinesApi
+val Dispatchers.Direct: CoroutineDispatcher get() = DirectDispatcher
+
+private object DirectDispatcher : CoroutineDispatcher() {
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+        block.run()
+    }
 }

@@ -20,6 +20,7 @@ import com.revolut.kompot.di.scope.ScreenQualifier
 import com.revolut.kompot.di.scope.ScreenScope
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerExtension
+import com.revolut.kompot.navigable.ControllerModelExtension
 import com.revolut.kompot.navigable.screen.BaseScreen
 import dagger.Binds
 import dagger.multibindings.Multibinds
@@ -33,4 +34,8 @@ interface BaseScreenModule {
     @Multibinds
     @ScreenScope
     fun provideControllerExtensions(): Set<ControllerExtension>
+
+    @Multibinds
+    @ScreenScope
+    fun provideControllerModelExtensions(): Set<ControllerModelExtension>
 }

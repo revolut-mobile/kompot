@@ -22,12 +22,80 @@ import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Interpolator
+import com.revolut.kompot.navigable.transition.Transition.Companion.DURATION_DEFAULT
 
 internal class ModalShiftTransition(
-    private val style: ModalAnimatable.Style
+    private val style: ModalAnimatable.Style,
+    private val showImmediately: Boolean = false,
 ) : Transition {
 
     private val interpolator: Interpolator = AccelerateDecelerateInterpolator()
+
+    override fun start(from: View?, to: View?, backward: Boolean, transitionListener: TransitionListener) {
+        if (!backward) {
+            if (showImmediately) {
+                startImmediateForwardTransition(to, transitionListener)
+            } else {
+                startForwardTransition(to, transitionListener)
+            }
+        } else {
+            val animatable = getAnimatable(from)
+            if (animatable != null) {
+                startBackwardTransition(animatable, transitionListener)
+            } else {
+                startFallbackBackwardTransition(from, to, transitionListener)
+            }
+        }
+    }
+
+    private fun startForwardTransition(to: View?, transitionListener: TransitionListener) {
+        val animatable = requireAnimatable(to)
+        transitionListener.onTransitionCreated()
+        transitionListener.onTransitionStart()
+        animatable.style = style
+        animatable.show {
+            transitionListener.onTransitionEnd()
+            transitionListener.onTransitionFinished()
+        }
+    }
+
+
+    private fun startImmediateForwardTransition(to: View?, transitionListener: TransitionListener) {
+        val animatable = requireAnimatable(to)
+        transitionListener.onTransitionCreated()
+        transitionListener.onTransitionStart()
+        animatable.style = style
+        animatable.showImmediately()
+        transitionListener.onTransitionEnd()
+        transitionListener.onTransitionFinished()
+    }
+
+    private fun startBackwardTransition(animatable: ModalAnimatable, transitionListener: TransitionListener) {
+        transitionListener.onTransitionCreated()
+        transitionListener.onTransitionStart()
+        animatable.hide {
+            transitionListener.onTransitionEnd()
+            transitionListener.onTransitionFinished()
+        }
+    }
+
+    private fun startFallbackBackwardTransition(from: View?, to: View?, transitionListener: TransitionListener) {
+        //For the cases when animatable class is not used we still should animate back from any view safely
+        transitionListener.onTransitionCreated()
+        transitionListener.onTransitionStart()
+        val animator = ObjectAnimator.ofFloat(from, View.ALPHA, 0f)
+        animator.interpolator = interpolator
+        animator.duration = DURATION_DEFAULT
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                (to ?: from)!!.post {
+                    transitionListener.onTransitionEnd()
+                    transitionListener.onTransitionFinished()
+                }
+            }
+        })
+        animator.start()
+    }
 
     private fun getAnimatable(view: View?): ModalAnimatable? {
         var currentView = view
@@ -39,46 +107,7 @@ internal class ModalShiftTransition(
         return null
     }
 
-    override fun start(from: View?, to: View?, backward: Boolean, transitionListener: TransitionListener) {
-        transitionListener.onTransitionCreated()
-        transitionListener.onTransitionStart()
-        if (!backward) {
-            getAnimatable(to)?.let { animatable ->
-                animatable.style = style
-                animatable.show {
-                    transitionListener.onTransitionEnd()
-                    transitionListener.onTransitionFinished()
-                }
-            }
-        } else {
-            val modalAnimatable = getAnimatable(from)
-            if (modalAnimatable != null) {
-                modalAnimatable.let { animatable ->
-                    animatable.hide {
-                        transitionListener.onTransitionEnd()
-                        transitionListener.onTransitionFinished()
-                    }
-                }
-            } else {
-                //For the cases when animatable class is not used we still should animate back from any view safely
-                transitionListener.onTransitionCreated()
-                transitionListener.onTransitionStart()
-                val animator = ObjectAnimator.ofFloat(from, View.ALPHA, 0f)
-                animator.interpolator = interpolator
-                animator.duration = AnimatorTransition.DURATION_DEFAULT
-                animator.addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator?) {
-                        (to ?: from)!!.post {
-                            transitionListener.onTransitionEnd()
-                            transitionListener.onTransitionFinished()
-                        }
-                    }
-                })
-                animator.start()
-            }
-
-        }
-    }
+    private fun requireAnimatable(view: View?): ModalAnimatable = checkNotNull(getAnimatable(view))
 
     override fun endImmediately() {
         //Do nothing

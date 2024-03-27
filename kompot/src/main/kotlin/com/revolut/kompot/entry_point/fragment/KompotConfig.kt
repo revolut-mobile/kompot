@@ -23,7 +23,7 @@ import com.revolut.kompot.navigable.root.RootFlow
 
 data class KompotConfig(
     val rootFlow: RootFlow<*, *>,
-    @LayoutRes val defaultFlowLayout: Int? = R.layout.base_flow_container,
+    @LayoutRes val defaultControllerContainer: Int? = R.layout.base_flow_container,
     val trimCacheThreshold: Int = DEFAULT_TRIM_CACHE_THRESHOLD,
     val savedStateEnabled: Boolean = true,
     val fullScreenEnabled: Boolean = true,
@@ -36,7 +36,7 @@ data class KompotConfig(
 
 internal fun KompotConfig.createDelegate() = KompotDelegate(
     rootFlow = rootFlow,
-    defaultFlowLayout = defaultFlowLayout,
+    defaultControllerContainer = defaultControllerContainer,
     trimCacheThreshold = trimCacheThreshold,
     savedStateEnabled = savedStateEnabled,
     fullScreenEnabled = fullScreenEnabled,

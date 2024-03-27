@@ -21,7 +21,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.view.LayoutInflater
 import androidx.annotation.LayoutRes
-import com.revolut.kompot.KompotPlugin
+import androidx.core.view.contains
 import com.revolut.kompot.holder.ControllerTransaction
 import com.revolut.kompot.holder.ControllerViewHolder
 import com.revolut.kompot.navigable.cache.ControllersCache
@@ -29,11 +29,12 @@ import com.revolut.kompot.navigable.hooks.HooksProvider
 
 internal open class ControllerManager(
     val modal: Boolean,
-    @LayoutRes internal val defaultFlowLayout: Int?,
+    @LayoutRes internal val defaultControllerContainer: Int?,
     internal val controllersCache: ControllersCache,
     internal val controllerViewHolder: ControllerViewHolder,
     internal val onAttachController: ChildControllerListener? = null,
     internal val onDetachController: ChildControllerListener? = null,
+    private val onTransitionCanceled: CanceledTransitionListener? = null
 ) {
 
     init {
@@ -43,7 +44,7 @@ internal open class ControllerManager(
                     from = activeController,
                     controllerManager = this
                 )
-                popTransaction.startWith(TransitionAnimation.MODAL_SLIDE)
+                popTransaction.startWith(ModalTransitionAnimation.ModalPopup())
                 _activeController = null
             }
         }
@@ -77,16 +78,29 @@ internal open class ControllerManager(
         controller: Controller,
         animation: TransitionAnimation,
         backward: Boolean,
-        parentController: Controller?
+        parentController: Controller?,
     ) {
         val oldController = _activeController
         _activeController = controller
 
-        controller.bind(this, parentController)
+        if (!backward) {
+            controller.bind(this, parentController, enterTransition = animation)
+        } else {
+            controller.bind(this, parentController)
+        }
 
         val context = controllerViewHolder.container.context
         val controllerView = controller.getOrCreateView(LayoutInflater.from(context))
-        controllerViewHolder.add(controllerView)
+        if (controllerViewHolder.container.contains(controllerView).not() && controllerView.parent != null){
+            val cache = controllersCache.getCacheLogWithKeys()
+            // Throwing exception is okay since the app is going to crash anyway.
+            throw IllegalStateException("Can’t show controller because it’s already attached to another flow. ${controller.fullControllerName} key: ${controller.key.value} \n $cache")
+        }
+        if (backward) {
+            controllerViewHolder.addToBottom(controllerView)
+        } else {
+            controllerViewHolder.add(controllerView)
+        }
         if (!controller.created) {
             controller.onCreate()
         }
@@ -95,10 +109,14 @@ internal open class ControllerManager(
             from = oldController.takeIf { oldController != _activeController },
             to = controller,
             controllerManager = this,
-            backward = backward
+            backward = backward,
+            indefinite = animation.indefinite,
         ).startWith(animation)
+    }
 
-        KompotPlugin.controllerShownSharedFlow.tryEmit(controller)
+    internal fun onTransitionCanceled(from: Controller?, backward: Boolean) {
+        _activeController = from
+        onTransitionCanceled?.invoke(backward)
     }
 
     fun removeActiveController() {
@@ -130,30 +148,22 @@ internal open class ControllerManager(
         onDetach()
     }
 
-    fun onAttach(): Boolean {
+    fun onAttach() {
         if (_activeController != null) {
             _attached = true
             if (_activeController?.attached == false) {
                 _activeController?.onAttach()
-
-                return true
             }
         }
-
-        return false
     }
 
-    fun onDetach(): Boolean {
+    fun onDetach() {
         if (_activeController != null) {
             _attached = false
             if (_activeController?.attached == true) {
                 _activeController?.onDetach()
-
-                return true
             }
         }
-
-        return false
     }
 
     fun handleBack(): Boolean {
@@ -168,7 +178,7 @@ internal open class ControllerManager(
                 controllerManager = this
             )
             if (attached) {
-                popTransaction.startWith(TransitionAnimation.MODAL_SLIDE)
+                popTransaction.startWith(ModalTransitionAnimation.ModalPopup())
             } else {
                 popTransaction.startWith(TransitionAnimation.NONE)
                 _attached = true
@@ -189,7 +199,7 @@ internal open class ControllerManager(
             ControllerTransaction.popTransaction(
                 from = requireNotNull(_activeController),
                 controllerManager = this
-            ).startWith(TransitionAnimation.MODAL_SLIDE)
+            ).startWith(ModalTransitionAnimation.ModalPopup())
             resetActiveController()
         }
     }
@@ -207,3 +217,4 @@ internal open class ControllerManager(
 }
 
 internal typealias ChildControllerListener = (Controller, ControllerManager) -> Unit
+internal typealias CanceledTransitionListener = (backward: Boolean) -> Unit

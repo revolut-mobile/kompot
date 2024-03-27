@@ -22,7 +22,6 @@ import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.revolut.kompot.ExperimentalKompotApi
 import com.revolut.kompot.holder.DefaultControllerViewHolder
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerKey
@@ -30,19 +29,22 @@ import com.revolut.kompot.navigable.ControllerManager
 import com.revolut.kompot.navigable.TransitionAnimation
 import com.revolut.kompot.navigable.cache.ControllerCacheStrategy
 import com.revolut.kompot.navigable.cache.ControllersCache
-import com.revolut.kompot.navigable.flow.FlowStep
-import java.util.*
+import com.revolut.kompot.navigable.flow.ControllerManagersProvider
+import com.revolut.kompot.navigable.vc.scroller.ScrollerItem
+import java.util.LinkedList
 
-@ExperimentalKompotApi
-internal class ScrollerFlowControllersAdapter<STEP : FlowStep>(
+internal class ScrollerFlowControllersAdapter<T : ScrollerItem>(
     @LayoutRes private val layoutContainerId: Int,
     private val parentController: Controller,
     private val controllersCache: ControllersCache,
-    private val flowModel: ScrollerFlowModel<STEP, *>
-) : ListAdapter<STEP, ScrollerFlowControllersAdapter.ControllerViewHolder>(ItemCallBack()) {
+    private val controllersFactory: (T) -> Controller,
+) : ListAdapter<T, ScrollerFlowControllersAdapter.ControllerViewHolder>(ItemCallBack()), ControllerManagersProvider {
 
-    private val controllerKeys = HashMap<STEP, ControllerKey>()
+    private val controllerKeys = HashMap<T, ControllerKey>()
     val childControllerManagers = LinkedList<ControllerManager>()
+
+    override val all: List<ControllerManager>
+        get() = childControllerManagers
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ControllerViewHolder {
         val container = LayoutInflater.from(parent.context).inflate(layoutContainerId, parent, false)
@@ -62,7 +64,7 @@ internal class ScrollerFlowControllersAdapter<STEP : FlowStep>(
                 controller = controller,
                 animation = TransitionAnimation.NONE,
                 backward = false,
-                parentController = parentController
+                parentController = parentController,
             )
         }
     }
@@ -79,6 +81,16 @@ internal class ScrollerFlowControllersAdapter<STEP : FlowStep>(
         removeController(holder)
     }
 
+    fun updateCache(oldList: List<T>, newList: List<T>) {
+        val itemsToRemove = oldList - newList.toSet()
+        itemsToRemove.map(::removeControllerFromCacheByStep)
+    }
+
+    private fun removeControllerFromCacheByStep(item: T) {
+        controllerKeys[item]?.let { controllerKey -> controllersCache.removeController(controllerKey, true) }
+        controllerKeys.remove(item)
+    }
+
     private fun removeController(holder: ControllerViewHolder) =
         holder.controllerManager.apply {
             detach()
@@ -90,14 +102,14 @@ internal class ScrollerFlowControllersAdapter<STEP : FlowStep>(
         onDetach()
     }
 
-    private fun getController(step: STEP): Controller = controllerKeys[step]
+    private fun getController(item: T): Controller = controllerKeys[item]
         ?.let { controllersCache.getController(it) }
-        ?: createControllerInternal(step)
+        ?: createControllerInternal(item)
 
-    private fun createControllerInternal(step: STEP) =
-        flowModel.getController(step).also {
-            it.cacheStrategy = ControllerCacheStrategy.DependentOn(parentController.key)
-            controllerKeys[step] = it.key
+    private fun createControllerInternal(item: T) =
+        controllersFactory.invoke(item).also {
+            it.cacheStrategy = ControllerCacheStrategy.Prioritized
+            controllerKeys[item] = it.key
         }
 
     internal class ControllerViewHolder(
@@ -108,12 +120,18 @@ internal class ScrollerFlowControllersAdapter<STEP : FlowStep>(
             controllerViewHolder = DefaultControllerViewHolder(itemView),
             modal = false,
             controllersCache = controllersCache,
-            defaultFlowLayout = null
+            defaultControllerContainer = null,
+            onTransitionCanceled = null,
         )
     }
 
-    internal class ItemCallBack<STEP : FlowStep> : DiffUtil.ItemCallback<STEP>() {
-        override fun areItemsTheSame(oldItem: STEP, newItem: STEP): Boolean = oldItem.javaClass.name == newItem.javaClass.name
-        override fun areContentsTheSame(oldItem: STEP, newItem: STEP): Boolean = oldItem.javaClass.name == newItem.javaClass.name
+    internal class ItemCallBack<T : ScrollerItem> : DiffUtil.ItemCallback<T>() {
+        override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
+            return oldItem.id == newItem.id
+        }
+
+        override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
+            return oldItem.equals(newItem)
+        }
     }
 }

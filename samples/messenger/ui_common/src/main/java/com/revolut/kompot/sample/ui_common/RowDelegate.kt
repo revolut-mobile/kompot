@@ -26,12 +26,12 @@ class RowDelegate : BaseRecyclerViewDelegate<RowDelegate.Model, RowDelegate.View
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.view_delegate_row, parent, false))
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>?) {
+    override fun onBindViewHolder(holder: ViewHolder, data: Model, pos: Int, payloads: List<Any>) {
         super.onBindViewHolder(holder, data, pos, payloads)
 
         holder.itemView.setOnClickListener { onItemClickSharedFlow.tryEmit(data) }
 
-        if (payloads.isNullOrEmpty()) {
+        if (payloads.isEmpty()) {
             holder.image.setImageResource(data.image)
             holder.title.setTextOrHide(data.title)
             holder.subtitle.setTextOrHide(data.subtitle)

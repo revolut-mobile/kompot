@@ -322,7 +322,7 @@ internal class BaseScreenTest {
     ) : ControllerModel(), ScreenModel<TestUIState, IOData.EmptyOutput> {
         override fun uiStateStream(): Flow<TestUIState> = uiStateFlow
 
-        override fun saveState(): Bundle = Bundle.EMPTY
+        override fun saveState(outState: Bundle) = Unit
 
         override fun restoreState(state: Bundle) = Unit
 
@@ -333,11 +333,12 @@ internal class BaseScreenTest {
 
     object FakeScreenComponent : BaseScreenComponent {
         override fun getControllerExtensions(): Set<ControllerExtension> = setOf()
+        override fun getControllerModelExtensions(): Set<ControllerModelExtension> = setOf()
     }
 
     data class TestPayload(val value: Int) : ScreenStates.UIPayload
     data class TestUIState(val value: Int) : ScreenStates.UI {
-        override fun calculatePayload(oldState: ScreenStates.UI): ScreenStates.UIPayload? =
+        override fun calculatePayload(oldState: ScreenStates.UI): ScreenStates.UIPayload =
             TestPayload((oldState as TestUIState).value)
     }
 

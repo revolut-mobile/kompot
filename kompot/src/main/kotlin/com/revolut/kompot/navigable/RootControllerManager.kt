@@ -23,7 +23,6 @@ import com.revolut.kompot.common.ActivityLauncher
 import com.revolut.kompot.common.PermissionsRequester
 import com.revolut.kompot.holder.RootControllerViewHolder
 import com.revolut.kompot.navigable.cache.ControllersCache
-import com.revolut.kompot.navigable.flow.RestorationPolicy
 import com.revolut.kompot.navigable.hooks.HooksProvider
 import com.revolut.kompot.navigable.root.RootFlow
 
@@ -31,16 +30,17 @@ internal class RootControllerManager(
     private val rootFlow: RootFlow<*, *>,
     private val activityLauncher: ActivityLauncher,
     private val permissionsRequester: PermissionsRequester,
-    @LayoutRes defaultFlowLayout: Int?,
+    @LayoutRes defaultControllerContainer: Int?,
     controllersCache: ControllersCache,
     hooksProvider: HooksProvider,
 ) : ControllerManager(
     modal = false,
-    defaultFlowLayout = defaultFlowLayout,
+    defaultControllerContainer = defaultControllerContainer,
     controllersCache = controllersCache,
     controllerViewHolder = RootControllerViewHolder(),
     onAttachController = null,
     onDetachController = null,
+    onTransitionCanceled = null,
 ), ActivityLauncher by activityLauncher, PermissionsRequester by permissionsRequester {
 
     private val rootControllerViewHolder
@@ -55,7 +55,7 @@ internal class RootControllerManager(
 
         savedState?.let { bundle ->
             rootFlow.doOnCreate {
-                rootFlow.restoreState(RestorationPolicy.FromBundle(bundle))
+                rootFlow.restoreState(bundle)
             }
         }
         showImmediately(rootFlow)
@@ -76,8 +76,8 @@ internal class RootControllerManager(
     }
 
     override fun onDestroy() {
-        controllersCache.clearCache()
         super.onDestroy()
+        controllersCache.clearCache()
     }
 
 }

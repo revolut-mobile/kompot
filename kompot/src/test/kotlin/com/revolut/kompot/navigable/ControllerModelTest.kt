@@ -17,13 +17,30 @@
 package com.revolut.kompot.navigable
 
 import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.inOrder
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.never
 import com.nhaarman.mockitokotlin2.verify
+import com.nhaarman.mockitokotlin2.whenever
+import com.revolut.kompot.common.ControllerDescriptor
+import com.revolut.kompot.common.ControllerHolder
+import com.revolut.kompot.common.ControllerRequest
 import com.revolut.kompot.common.ErrorEvent
+import com.revolut.kompot.common.ErrorInterceptedEventResult
+import com.revolut.kompot.common.ErrorInterceptionEvent
+import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.LifecycleEvent
+import com.revolut.kompot.common.ModalDestination
+import com.revolut.kompot.common.NavigationDestination
+import com.revolut.kompot.common.NavigationEvent
+import com.revolut.kompot.common.NavigationRequest
+import com.revolut.kompot.common.NavigationRequestEvent
+import com.revolut.kompot.common.NavigationRequestResult
+import com.revolut.kompot.dispatchBlockingTest
+import com.revolut.kompot.navigable.utils.showModal
+import com.revolut.kompot.navigable.vc.ViewController
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -33,12 +50,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 internal class ControllerModelTest {
 
@@ -281,6 +300,29 @@ internal class ControllerModelTest {
             )
             assertEquals(testException, catchedThrowable)
             verify(eventsDispatcher).handleEvent(ErrorEvent(testException))
+        }
+    }
+
+    @Test
+    fun `GIVEN error intercepted WHEN collect THEN do not call handle error`() {
+        val testException = IllegalStateException()
+        val testFlow = flow<Unit> {
+            throw testException
+        }
+        with(TestControllerModel()) {
+            whenever(this.eventsDispatcher.handleEvent(any<ErrorInterceptionEvent>())) doReturn ErrorInterceptedEventResult
+            onLifecycleEvent(LifecycleEvent.CREATED)
+
+            var handleErrorCalled = false
+            testFlow.collectTillFinishTest(
+                handleError = {
+                    handleErrorCalled = true
+                    false
+                }
+            )
+            assertFalse(handleErrorCalled)
+            verify(eventsDispatcher).handleEvent(ErrorInterceptionEvent(testException))
+            verify(eventsDispatcher, never()).handleEvent(any<ErrorEvent>())
         }
     }
 
@@ -564,19 +606,95 @@ internal class ControllerModelTest {
         }
     }
 
+    @Test
+    fun `extensions are initiated when controller model injectDependencies is called`() {
+        with(TestControllerModel()) {
+            verify(extensions.first()).init(this)
+        }
+    }
+
+    @Test
+    fun `extension's onParentLifecycleScope is called whenever parent's lifecycle is changed`() {
+        with(TestControllerModel()) {
+            onLifecycleEvent(LifecycleEvent.SHOWN)
+            verify(extensions.first()).onParentLifecycleEvent(LifecycleEvent.SHOWN)
+            onLifecycleEvent(LifecycleEvent.HIDDEN)
+            verify(extensions.first()).onParentLifecycleEvent(LifecycleEvent.HIDDEN)
+            onLifecycleEvent(LifecycleEvent.CREATED)
+            verify(extensions.first()).onParentLifecycleEvent(LifecycleEvent.CREATED)
+            onLifecycleEvent(LifecycleEvent.FINISHED)
+            verify(extensions.first()).onParentLifecycleEvent(LifecycleEvent.FINISHED)
+        }
+    }
+
+    @Test
+    fun `GIVEN controller bound to descriptor WHEN show as modal THEN dispatch modal command`() {
+        val descriptor = object : ControllerDescriptor<IOData.EmptyOutput> {}
+        val vc = mock<ViewController<IOData.EmptyOutput>>()
+
+        val controllerRequestResult = ControllerHolder(vc)
+
+        with(TestControllerModel()) {
+            whenever(eventsDispatcher.handleEvent(ControllerRequest(descriptor)))
+                .thenReturn(controllerRequestResult)
+
+            descriptor.getController().showModalTest()
+
+            verify(eventsDispatcher).handleEvent(
+                NavigationEvent(ModalDestination.CallbackController(vc))
+            )
+        }
+    }
+
+    @Test
+    fun `GIVEN nav command bound to nav request WHEN navigate via request THEN dispatch nav command`() = dispatchBlockingTest {
+        val navRequest = object : NavigationRequest {}
+        val navCommand = object : NavigationDestination {}
+
+        with(TestControllerModel()) {
+            whenever(eventsDispatcher.handleEvent(NavigationRequestEvent(navRequest)))
+                .thenReturn(NavigationRequestResult { navCommand })
+
+            navRequest.navigate()
+
+            verify(eventsDispatcher).handleEvent(NavigationEvent(navCommand))
+        }
+    }
+
+    @Test
+    fun `GIVEN nav request failure WHEN navigate via request THEN propagate exception`() {
+        val navRequest = object : NavigationRequest {}
+
+        with(TestControllerModel()) {
+            whenever(eventsDispatcher.handleEvent(NavigationRequestEvent(navRequest)))
+                .thenThrow(IllegalStateException())
+
+            assertThrows<IllegalStateException> {
+                runBlocking { navRequest.navigate() }
+            }
+        }
+    }
+
     private fun CoroutineScope.childrenCount() = coroutineContext.job.children.count()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     inner class TestControllerModel : ControllerModel() {
+
+        val extensions: Set<ControllerModelExtension> = setOf(mock())
 
         init {
             injectDependencies(
                 dialogDisplayer = mock(),
                 eventsDispatcher = mock(),
                 controllersCache = mock(),
-                mainDispatcher = UnconfinedTestDispatcher()
+                mainDispatcher = UnconfinedTestDispatcher(),
+                controllerModelExtensions = extensions,
             )
         }
+
+        fun <T : IOData.Output> ViewController<T>.showModalTest(
+            style: ModalDestination.Style = ModalDestination.Style.FULLSCREEN_FADE,
+            onResult: ((T) -> Unit)? = null
+        ) = showModal(eventsDispatcher, style, onResult)
 
         fun <T> Flow<T>.collectTillHideTest(
             handleError: suspend (Throwable) -> Boolean = { false },

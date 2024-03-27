@@ -19,7 +19,6 @@ package com.revolut.kompot.utils
 import com.revolut.kompot.coroutines.AppCoroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,7 +31,6 @@ import kotlin.coroutines.EmptyCoroutineContext
 @Suppress("FunctionName")
 fun ControllerScope(context: CoroutineContext = EmptyCoroutineContext): CoroutineScope = AppCoroutineScope(Dispatchers.Main.immediate + context)
 
-@OptIn(FlowPreview::class)
 internal fun <T> Flow<T>.debounceButEmitFirst(timeoutMillis: Long): Flow<T> =
     debounce(object : (T) -> Long {
         val firstEmission = AtomicBoolean(true)

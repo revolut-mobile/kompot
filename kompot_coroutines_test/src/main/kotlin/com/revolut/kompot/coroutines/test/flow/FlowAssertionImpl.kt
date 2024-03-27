@@ -17,6 +17,7 @@
 package com.revolut.kompot.coroutines.test.flow
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 
 internal class FlowAssertionImpl<T>(
@@ -69,6 +70,11 @@ internal class FlowAssertionImpl<T>(
         return this
     }
 
+    override fun assertNotCompleted(): FlowAssertion<T> {
+        assertFalse({ testState is TestState.Completed }, "Flow completed")
+        return this
+    }
+
     override fun assertError(throwable: Throwable): FlowAssertion<T> {
         val actualThrowable = (testState as? TestState.Error<T>)?.throwable
         assertEquals(throwable, actualThrowable)
@@ -78,6 +84,11 @@ internal class FlowAssertionImpl<T>(
     override fun <R : Throwable> assertError(throwableClass: Class<R>): FlowAssertion<T> {
         val actualThrowable = (testState as? TestState.Error<T>)?.throwable
         assertTrue({ throwableClass.isInstance(actualThrowable) }, "expected $throwableClass but was ${actualThrowable?.javaClass}")
+        return this
+    }
+
+    override fun assertNoErrors(): FlowAssertion<T> {
+        assertTrue({ testState !is TestState.Error }, "Expected no errors but got ${(testState as? TestState.Error)?.throwable}")
         return this
     }
 }

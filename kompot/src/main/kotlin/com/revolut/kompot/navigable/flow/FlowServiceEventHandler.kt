@@ -31,7 +31,7 @@ import com.revolut.kompot.common.service.ServiceEvent
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerManager
 import com.revolut.kompot.navigable.ControllerModel
-import com.revolut.kompot.navigable.transition.AnimatorTransition
+import com.revolut.kompot.navigable.transition.Transition.Companion.DURATION_DEFAULT
 
 internal class FlowServiceEventHandler(
     private val controller: Controller,
@@ -92,7 +92,7 @@ internal class FlowServiceEventHandler(
         if (currentColor != color) {
             view.doOnPreDraw {
                 ValueAnimator.ofObject(ArgbEvaluator(), currentColor, color).apply {
-                    duration = AnimatorTransition.DURATION_DEFAULT
+                    duration = DURATION_DEFAULT
                     addUpdateListener { animator ->
                         view.setBackgroundColor(animator.animatedValue as Int)
                     }

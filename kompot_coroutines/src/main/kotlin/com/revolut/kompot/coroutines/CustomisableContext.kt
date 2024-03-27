@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 package com.revolut.kompot.coroutines
 
 import kotlinx.coroutines.CoroutineScope
@@ -30,14 +31,9 @@ class CustomContextWrapper(context: CoroutineContext) : CoroutineContext {
     override fun plus(context: CoroutineContext): CoroutineContext =
         CustomContextWrapper(wrappedContext.plus(context.withTestableContinuationInterceptor()))
 
-    override fun <R> fold(initial: R, operation: (R, CoroutineContext.Element) -> R): R =
-        wrappedContext.fold(initial, operation)
-
-    override fun <E : CoroutineContext.Element> get(key: CoroutineContext.Key<E>): E? =
-        wrappedContext[key]
-
-    override fun minusKey(key: CoroutineContext.Key<*>): CoroutineContext =
-        wrappedContext.minusKey(key)
+    override fun <R> fold(initial: R, operation: (R, CoroutineContext.Element) -> R): R = wrappedContext.fold(initial, operation)
+    override fun <E : CoroutineContext.Element> get(key: CoroutineContext.Key<E>): E? = wrappedContext[key]
+    override fun minusKey(key: CoroutineContext.Key<*>): CoroutineContext = wrappedContext.minusKey(key)
 }
 
 private fun CoroutineContext.withTestableContinuationInterceptor(): CoroutineContext {
@@ -51,5 +47,4 @@ private fun CoroutineContext.withTestableContinuationInterceptor(): CoroutineCon
 }
 
 @Suppress("FunctionName")
-fun AppCoroutineScope(context: CoroutineContext = Dispatchers.Default) =
-    CoroutineScope(CustomContextWrapper(SupervisorJob() + context))
+fun AppCoroutineScope(context: CoroutineContext = Dispatchers.Default) = CoroutineScope(CustomContextWrapper(SupervisorJob() + context))

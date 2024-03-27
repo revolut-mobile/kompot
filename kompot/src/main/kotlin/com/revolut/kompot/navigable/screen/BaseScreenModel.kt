@@ -22,6 +22,7 @@ import androidx.annotation.VisibleForTesting
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.LifecycleEvent
 import com.revolut.kompot.navigable.ControllerModel
+import com.revolut.kompot.navigable.SavedStateOwner
 import com.revolut.kompot.navigable.screen.state.SaveStateDelegate
 import com.revolut.kompot.utils.MutableBehaviourFlow
 import com.revolut.kompot.navigable.binder.ModelBinder
@@ -36,7 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.withIndex
 
 abstract class BaseScreenModel<STATE : ScreenStates.Domain, UI : ScreenStates.UI, OUTPUT : IOData.Output>(private val stateMapper: StateMapper<STATE, UI>) : ControllerModel(),
-    ScreenModel<UI, OUTPUT> {
+    ScreenModel<UI, OUTPUT>, SavedStateOwner {
 
     protected abstract val initialState: STATE
 
@@ -92,13 +93,12 @@ abstract class BaseScreenModel<STATE : ScreenStates.Domain, UI : ScreenStates.UI
         backCommandsBinder.notify(Unit)
     }
 
-    override fun saveState(): Bundle = Bundle().apply {
+    override fun saveState(outState: Bundle) {
         saveStateDelegate?.getRetainedState(state)?.let { retainedState ->
-            putParcelable(DOMAIN_STATE_KEY, retainedState)
+            outState.putParcelable(DOMAIN_STATE_KEY, retainedState)
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun restoreState(state: Bundle) {
         state.classLoader = javaClass.classLoader
         state.getParcelable<Parcelable>(DOMAIN_STATE_KEY)?.let { retainedState ->

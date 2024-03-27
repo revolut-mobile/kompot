@@ -25,3 +25,8 @@ sealed class RestorationPolicy {
     data class FromBundle(val bundle: Bundle, override val postponed: Boolean = false) : RestorationPolicy()
     data class FromParent(val parentFlowModel: FlowModel<*, *>, override val postponed: Boolean = false) : RestorationPolicy()
 }
+
+enum class RestorationState {
+    REQUIRED,
+    POSTPONED,
+}

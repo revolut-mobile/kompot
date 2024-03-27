@@ -30,7 +30,7 @@ internal data class FlowStateWrapper<STATE : FlowState, STEP : FlowStep>(
     val currentScreenState: Bundle? = null,
     val animation: TransitionAnimation = TransitionAnimation.NONE,
     val currentControllerKey: ControllerKey? = null
-): Parcelable
+) : Parcelable
 
 @Parcelize
 internal data class ChildFlowState(

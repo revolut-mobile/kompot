@@ -59,12 +59,33 @@ internal class DialogDisplayerTest {
     }
 
     @Test
+    fun `GIVEN dialog model WHEN hide dialog THEN proxy call to correct delegate`() {
+        val firstDelegate = spy(FirstFakeDialogDisplayerDelegate())
+        val dialogModel = FirstFakeDialogModel("")
+
+        val displayer = DialogDisplayer(FakeLoadingDialogDisplayer, listOf(firstDelegate))
+
+        displayer.hideDialog(dialogModel)
+
+        verify(firstDelegate).hideDialog()
+    }
+
+    @Test
     fun `throw an exception with unhandled delegate model`() {
         val firstDelegate = spy(FirstFakeDialogDisplayerDelegate())
         val secondDelegate = spy(SecondFakeDialogDisplayerDelegate())
         val displayer = DialogDisplayer(FakeLoadingDialogDisplayer, listOf(firstDelegate, secondDelegate))
 
         assertThrows(IllegalStateException::class.java, { displayer.showDialog(UnknownDialogModel("")) })
+    }
+
+    @Test
+    fun `GIVEN unknown dialog model WHEN hide dialog THEN throw an exception`() {
+        val firstDelegate = spy(FirstFakeDialogDisplayerDelegate())
+        val secondDelegate = spy(SecondFakeDialogDisplayerDelegate())
+        val displayer = DialogDisplayer(FakeLoadingDialogDisplayer, listOf(firstDelegate, secondDelegate))
+
+        assertThrows(IllegalStateException::class.java) { displayer.hideDialog(UnknownDialogModel("")) }
     }
 
     private data class UnknownDialogModel(val message: String) : DialogModel<EmptyDialogModelResult>

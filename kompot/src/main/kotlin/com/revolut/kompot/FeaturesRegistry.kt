@@ -17,10 +17,13 @@
 package com.revolut.kompot
 
 import android.content.Context
+import com.revolut.kompot.common.ControllerDescriptor
+import com.revolut.kompot.common.ControllerHolder
+import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.NavigationDestination
+import com.revolut.kompot.common.NavigationRequest
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.flow.BaseFlowModel
-import javax.inject.Inject
 
 interface FeaturesRegistry {
     fun clearFeatures(context: Context, signOut: Boolean)
@@ -37,9 +40,17 @@ interface FeaturesRegistry {
         destination: NavigationDestination,
         flowModel: BaseFlowModel<*, *, *>
     ): Controller
+
+    fun provideControllerOrThrow(
+        descriptor: ControllerDescriptor<*>,
+    ): ControllerHolder
+
+    suspend fun getDestinationOrThrow(
+        request: NavigationRequest
+    ): NavigationDestination
 }
 
-class DefaultFeaturesRegistry @Inject constructor() : FeaturesRegistry {
+class DefaultFeaturesRegistry : FeaturesRegistry {
     private val featureGateways: MutableList<FeatureGateway> = mutableListOf()
     private val featureHolders: MutableList<FeatureHolder> = mutableListOf()
 
@@ -74,25 +85,25 @@ class DefaultFeaturesRegistry @Inject constructor() : FeaturesRegistry {
     override fun getControllerOrThrow(
         destination: NavigationDestination,
         flowModel: BaseFlowModel<*, *, *>
-    ): Controller {
-        featureGateways.forEach { gateway ->
-            val controller = gateway.getController(destination, flowModel)
-            if (controller != null) {
-                return controller
-            }
-        }
-        throw IllegalStateException("Controller for $destination not found")
-    }
+    ): Controller =
+        featureGateways.firstNotNullOfOrNull { gateway ->
+            gateway.getController(destination, flowModel)
+        } ?: error("Controller for $destination not found")
 
-    override fun interceptDestination(destination: NavigationDestination): NavigationDestination? {
-        featureGateways.forEach { gateway ->
-            val replacedDestination = gateway.interceptDestination(destination)
-            if (replacedDestination != null) {
-                return replacedDestination
-            }
+    override fun provideControllerOrThrow(descriptor: ControllerDescriptor<*>): ControllerHolder =
+        featureGateways.firstNotNullOfOrNull { gateway ->
+            gateway.provideController(descriptor)
+        } ?: error("Controller for $descriptor not found")
+
+    override fun interceptDestination(destination: NavigationDestination): NavigationDestination? =
+        featureGateways.firstNotNullOfOrNull { gateway ->
+            gateway.interceptDestination(destination)
         }
-        return null
-    }
+
+    override suspend fun getDestinationOrThrow(request: NavigationRequest): NavigationDestination =
+        featureGateways.firstNotNullOfOrNull { gateway ->
+            gateway.getDestination(request)
+        } ?: error("Destination for $request not found")
 }
 
 interface FeatureApi
@@ -106,6 +117,9 @@ interface FeatureGateway : FeatureHolder {
 
     fun interceptDestination(destination: NavigationDestination): NavigationDestination? = null
 
+    fun <T : IOData.Output> provideController(descriptor: ControllerDescriptor<T>): ControllerHolder? = null
+
+    suspend fun getDestination(request: NavigationRequest): NavigationDestination? = null
 }
 
 interface FeatureHolder {

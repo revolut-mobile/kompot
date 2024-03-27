@@ -16,9 +16,42 @@
 
 package com.revolut.kompot.view
 
-import com.revolut.kompot.navigable.transition.TransitionCallbacks
+import android.os.Parcelable
+import android.util.SparseArray
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowInsets
+import kotlinx.parcelize.Parcelize
 
-interface ControllerContainer : TransitionCallbacks {
+interface ControllerContainer {
     var fitStatusBar: Boolean
     var fitNavigationBar: Boolean
+    var containerId: String
+    val controllersTransitionActive: Boolean
+    val latestDispatchedInsets: WindowInsets?
+
+    var insetsInterceptor: ((View, WindowInsets) -> WindowInsets)?
+
+    fun handleViewAttachedToWindow(containerView: View)
+    fun handleDispatchApplyWindowInsets(controllerContainer: ControllerContainer, insets: WindowInsets): WindowInsets
+    fun handleDispatchTouchEvent(ev: MotionEvent): Boolean
+
+    fun saveState(outState: SparseArray<Parcelable>) = Unit
+    fun restoreState(state: SparseArray<Parcelable>) = Unit
+
+    fun allowSavedStateDispatch()
+    fun useSavedStateDispatchAllowance(): Boolean
+
+    fun onControllersTransitionStart(indefinite: Boolean)
+    fun onControllersTransitionEnd(indefinite: Boolean)
+    fun onControllersTransitionCanceled(indefinite: Boolean)
+
+    companion object {
+        const val MAIN_CONTAINER_ID = "MAIN_CONTAINER_ID"
+        const val MODAL_CONTAINER_ID = "MODAL_CONTAINER_ID"
+        const val NO_CONTAINER_ID = "NO_CONTAINER_ID"
+    }
 }
+
+@Parcelize
+internal object DummyParcelable : Parcelable

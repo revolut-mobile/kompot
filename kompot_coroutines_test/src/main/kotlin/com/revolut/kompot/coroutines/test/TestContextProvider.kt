@@ -20,11 +20,13 @@ import com.revolut.kompot.coroutines.AppCoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 object TestContextProvider {
     val testScheduler = TestCoroutineScheduler()
 
     fun unconfinedDispatcher() = UnconfinedTestDispatcher(testScheduler)
-    fun unconfinedTestScope() = AppCoroutineScope(unconfinedDispatcher())
+    fun unconfinedTestScope(context: CoroutineContext = EmptyCoroutineContext) = AppCoroutineScope(unconfinedDispatcher() + context)
 }

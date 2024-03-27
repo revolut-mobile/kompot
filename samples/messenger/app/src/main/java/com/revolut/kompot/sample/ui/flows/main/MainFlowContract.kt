@@ -1,41 +1,40 @@
 package com.revolut.kompot.sample.ui.flows.main
 
 import com.revolut.kompot.common.IOData
-import com.revolut.kompot.navigable.ControllerKey
-import com.revolut.kompot.navigable.flow.FlowModel
 import com.revolut.kompot.navigable.flow.FlowState
-import com.revolut.kompot.navigable.flow.FlowStep
+import com.revolut.kompot.navigable.flow.ReusableFlowStep
+import com.revolut.kompot.navigable.vc.composite.ui_states_flow.UIStatesFlowModel
+import com.revolut.kompot.navigable.vc.ui.States
 import com.revolut.kompot.sample.ui.views.BottomBar
-import kotlinx.coroutines.flow.Flow
 import kotlinx.parcelize.Parcelize
 
 interface MainFlowContract {
 
-    interface FlowModelApi : FlowModel<Step, IOData.EmptyOutput> {
+    interface FlowModelApi : UIStatesFlowModel<DomainState, UIState, Step, IOData.EmptyOutput> {
         fun onTabSelected(tabId: String)
-        fun tabsStateFlow(): Flow<TabsState>
     }
 
-    data class TabsState(
+    data class DomainState(val selectedTabId: String) : States.Domain
+
+    data class UIState(
         val selectedTabId: String,
         val tabs: List<BottomBar.Item>
-    )
+    ) : States.UI
 
     @Parcelize
     data class State(
         val selectedTabId: String
     ) : FlowState
 
-    sealed class Step : FlowStep {
+    sealed class Step : ReusableFlowStep {
         @Parcelize
-        object ChatList : Step()
+        object ChatList : Step() {
+            override val key: String get() = "chatList"
+        }
 
         @Parcelize
-        object ContactList : Step()
+        object ContactList : Step() {
+            override val key: String get() = "contactList"
+        }
     }
-
-    companion object {
-        val mainFlowKey = ControllerKey("MainFlow")
-    }
-
 }

@@ -16,26 +16,28 @@
 
 package com.revolut.kompot.navigable.screen
 
-import android.app.Service
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.view.inputmethod.InputMethodManager
 import androidx.core.view.postDelayed
+import com.revolut.kompot.KompotPlugin
 import com.revolut.kompot.common.Event
 import com.revolut.kompot.common.EventResult
 import com.revolut.kompot.common.EventsDispatcher
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.common.LifecycleEvent
-import com.revolut.kompot.di.flow.ParentFlowComponent
+import com.revolut.kompot.di.flow.ControllerComponent
 import com.revolut.kompot.di.screen.BaseScreenComponent
 import com.revolut.kompot.navigable.Controller
 import com.revolut.kompot.navigable.ControllerModel
-import com.revolut.kompot.navigable.binder.CompositeBinding
+import com.revolut.kompot.navigable.SavedStateOwner
 import com.revolut.kompot.navigable.findRootFlow
+import com.revolut.kompot.navigable.hooks.LifecycleViewTagHook
 import com.revolut.kompot.navigable.utils.Preconditions
+import com.revolut.kompot.navigable.utils.hideKeyboard
+import com.revolut.kompot.navigable.utils.showKeyboard
 import com.revolut.kompot.utils.DEFAULT_EXTRA_BUFFER_CAPACITY
 import com.revolut.kompot.utils.debounceButEmitFirst
 import com.revolut.kompot.utils.withPrevious
@@ -59,7 +61,7 @@ abstract class BaseScreen<
         UI_STATE : ScreenStates.UI,
         INPUT_DATA : IOData.Input,
         OUTPUT_DATA : IOData.Output
-        >(val inputData: INPUT_DATA) : Controller(), Screen<OUTPUT_DATA>, EventsDispatcher {
+        >(val inputData: INPUT_DATA) : Controller(), Screen<OUTPUT_DATA>, EventsDispatcher, SavedStateOwner {
 
     final override var onScreenResult: (data: OUTPUT_DATA) -> Unit = { }
 
@@ -70,23 +72,21 @@ abstract class BaseScreen<
     )
     private val transitionEndFlow = MutableSharedFlow<Boolean>(extraBufferCapacity = DEFAULT_EXTRA_BUFFER_CAPACITY)
 
-    private val tillDestroyBinding = CompositeBinding()
-
     abstract val screenComponent: BaseScreenComponent
 
-    protected val flowComponent: ParentFlowComponent
+    protected val flowComponent: ControllerComponent
         get() = parentFlow.component
 
     protected abstract val screenModel: ScreenModel<UI_STATE, OUTPUT_DATA>
 
     open val needKeyboard: Boolean = false
 
-    override val controllerDelegates by lazy {
+    override val controllerExtensions by lazy {
         screenComponent.getControllerExtensions()
     }
 
     override fun createView(inflater: LayoutInflater): View {
-        val view = patchLayoutInflaterWithTheme(inflater).inflate(layoutId, null, false) as? ControllerContainer
+        val view = getViewInflater(inflater).inflate(layoutId, null, false) as? ControllerContainer
             ?: throw IllegalStateException("Root ViewGroup should be ControllerContainer")
 
         view.applyEdgeToEdgeConfig()
@@ -94,6 +94,9 @@ abstract class BaseScreen<
 
         view.tag = controllerName
 
+        hooksProvider?.getHook(LifecycleViewTagHook.Key)?.tagId?.let { lifecycleTag ->
+            view.setTag(lifecycleTag, lifecycle)
+        }
         return view
     }
 
@@ -107,7 +110,8 @@ abstract class BaseScreen<
             dialogDisplayer = findRootFlow().rootDialogDisplayer,
             eventsDispatcher = this@BaseScreen,
             controllersCache = controllersCache,
-            mainDispatcher = Dispatchers.Main.immediate
+            mainDispatcher = Dispatchers.Main.immediate,
+            controllerModelExtensions = screenComponent.getControllerModelExtensions(),
         )
 
         startCollectingUIState()
@@ -164,6 +168,7 @@ abstract class BaseScreen<
             activity.currentFocus?.clearFocus()
             view.showKeyboard(400)
         }
+        KompotPlugin.controllerLifecycleCallbacks.forEach { callback -> callback.onControllerAttached(this) }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -252,9 +257,13 @@ abstract class BaseScreen<
         onDetach()
     }
 
-    fun saveState() = screenModel.saveState()
+    override fun saveState(outState: Bundle) {
+        screenModel.saveState(outState)
+    }
 
-    fun restoreState(state: Bundle) = screenModel.restoreState(state)
+    override fun restoreState(state: Bundle) {
+        screenModel.restoreState(state)
+    }
 
     protected open fun onScreenViewAttached(view: View) = Unit
 
@@ -265,16 +274,4 @@ abstract class BaseScreen<
     protected open fun onScreenViewDestroyed() = Unit
 
     protected abstract fun bindScreen(uiState: UI_STATE, payload: ScreenStates.UIPayload?)
-}
-
-private fun View.showKeyboard(delayMs: Long = 0) {
-    postDelayed({
-        val inputMethodManager = context.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager
-        inputMethodManager.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
-    }, delayMs)
-}
-
-private fun View.hideKeyboard() {
-    val inputMethodManager = context.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager
-    inputMethodManager.hideSoftInputFromWindow(windowToken, 0)
 }

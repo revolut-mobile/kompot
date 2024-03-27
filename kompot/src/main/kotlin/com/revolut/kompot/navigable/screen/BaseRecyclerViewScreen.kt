@@ -21,6 +21,9 @@ import android.os.Parcelable
 import android.view.View
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
+import androidx.annotation.RestrictTo
+import androidx.annotation.RestrictTo.Scope.TESTS
+import androidx.annotation.VisibleForTesting
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,8 +33,9 @@ import com.revolut.decorations.overlay.DelegatesOverlayItemDecoration
 import com.revolut.kompot.R
 import com.revolut.kompot.common.IOData
 import com.revolut.kompot.navigable.hooks.BaseRecyclerViewScreenHook
+import com.revolut.recyclerkit.delegates.DelegatesManager
+import com.revolut.recyclerkit.delegates.DiffAdapter
 import com.revolut.recyclerkit.delegates.RecyclerViewDelegate
-import com.revolut.rxdiffadapter.RxDiffAdapter
 
 abstract class BaseRecyclerViewScreen<
         UI_STATE : ScreenStates.UIList,
@@ -42,6 +46,9 @@ abstract class BaseRecyclerViewScreen<
     override val layoutId: Int = R.layout.screen_recycler_view
 
     protected abstract val delegates: List<RecyclerViewDelegate<*, *>>
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    @get:RestrictTo(TESTS)
+    val delegatesForTesting: List<RecyclerViewDelegate<*, *>> get() = delegates
     protected lateinit var recyclerView: RecyclerView
     @IdRes
     protected open val recyclerViewId: Int = R.id.recyclerView
@@ -50,12 +57,11 @@ abstract class BaseRecyclerViewScreen<
     protected open val saveRecyclerViewState = true
     private var recyclerViewState: Parcelable? = null
 
-    protected open val listAdapter: RxDiffAdapter by lazy(LazyThreadSafetyMode.NONE) {
-        RxDiffAdapter(
-            delegates = emptyList(),
+    protected open val listAdapter: DiffAdapter by lazy(LazyThreadSafetyMode.NONE) {
+        DiffAdapter(
+            delegatesManager = DelegatesManager(emptyList()),
             async = false,
-            autoScrollToTop = autoScrollToTop,
-            detectMoves = true
+            autoScrollToTop = autoScrollToTop
         )
     }
 
